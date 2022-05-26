@@ -21,3 +21,7 @@ This is an art project, not a software tool for music creation. I consider it to
 This work is licensed under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/). I am aware that this is an unusual choice for code, but it reflects its status as an art project. IANAL, so I'm not sure how this stands up legally, but in my mind this is an infinite interactive composition and as such it should be licensed like music or other creative works.
 
 This means you can use the ideas and/or the code and/or the music output in derivative works, but you must give credit to the original source (ie. me and this project).
+
+
+# Forked by aday - Gonna recolor this and see what I can do about MIDI Sync
+# Kudos to vitling for creating this fun toy
