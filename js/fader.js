@@ -7,7 +7,7 @@ function clamp01(n) {
     return n < 0 ? 0 : n > 1 ? 1 : n;
 }
 export function VerticalFader(bounds, opts) {
-    var _a;
+    var _a, _b;
     const accent = (_a = opts === null || opts === void 0 ? void 0 : opts.accent) !== null && _a !== void 0 ? _a : "#aa88cc";
     const wrap = document.createElement("div");
     wrap.classList.add("mixer-fader");
@@ -44,9 +44,9 @@ export function VerticalFader(bounds, opts) {
         thumb.style.bottom = `${bottomPx}px`;
         const v = denorm(normalized);
         const [lo, hi] = bounds;
-        wrap.setAttribute("aria-valuemin", String(lo));
-        wrap.setAttribute("aria-valuemax", String(hi));
-        wrap.setAttribute("aria-valuenow", String(Math.round(v * 1000) / 1000));
+        track.setAttribute("aria-valuemin", String(lo));
+        track.setAttribute("aria-valuemax", String(hi));
+        track.setAttribute("aria-valuenow", String(Math.round(v * 1000) / 1000));
     }
     function emit() {
         const v = denorm(normalized);
@@ -115,7 +115,8 @@ export function VerticalFader(bounds, opts) {
             emit();
         }
     });
-    wrap.setAttribute("role", "slider");
+    track.setAttribute("role", "slider");
+    track.setAttribute("aria-label", (_b = opts === null || opts === void 0 ? void 0 : opts.ariaLabel) !== null && _b !== void 0 ? _b : "Level");
     paint();
     requestAnimationFrame(() => paint());
     const ro = new ResizeObserver(() => paint());

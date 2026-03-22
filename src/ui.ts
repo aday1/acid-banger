@@ -638,10 +638,15 @@ function mixerStripLevelFader(
     level: NumericParameter,
     colorHost: HTMLElement,
     midiId: string,
-    midiMenu: MidiTargetMenu
+    midiMenu: MidiTargetMenu,
+    busName: string
 ): HTMLElement {
     const c = readUiColorVars(colorHost);
-    const f = VerticalFader(level.bounds, { accent: c.dial, label: "Lv" });
+    const f = VerticalFader(level.bounds, {
+        accent: c.dial,
+        label: "Lv",
+        ariaLabel: `${busName} bus level`,
+    });
     f.bind((v) => {
         level.value = v;
     });
@@ -701,7 +706,8 @@ function MixerPanel(
                 strip.level,
                 colorHost,
                 `mixer.strip${i}.level`,
-                midiMenu
+                midiMenu,
+                name
             )
         );
 
@@ -1117,6 +1123,11 @@ function SyncAndMidiPanel(clock: ClockUnit) {
     protoLink.innerText =
         "Start link-bridge on this PC (after Register-AcidLinkBridgeProtocol.ps1)";
 
+    const protoTrouble = document.createElement("div");
+    protoTrouble.classList.add("sync-hint", "link-bridge-protocol-trouble");
+    protoTrouble.innerText =
+        "If the link does nothing: allow opening the app when the browser asks; re-run Register-AcidLinkBridgeProtocol.ps1 from this repo after moving the folder; or Win+R and paste acid-banger-linkbridge://start then Enter.";
+
     const stepsTitle = document.createElement("div");
     stepsTitle.classList.add("link-bridge-steps-title");
     stepsTitle.innerText = "Quick start";
@@ -1151,6 +1162,7 @@ function SyncAndMidiPanel(clock: ClockUnit) {
         docLink,
         protoHint,
         protoLink,
+        protoTrouble,
         stepsTitle,
         steps,
         cmdLabel,

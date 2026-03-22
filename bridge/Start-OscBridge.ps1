@@ -2,7 +2,9 @@
 # Install deps (if needed) and run bridge/server.mjs (UDP OSC <-> WebSocket for the browser).
 param(
     [switch]$SkipInstall,
-    [switch]$Clean
+    [switch]$Clean,
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$ProtocolLaunchArgs
 )
 
 $ErrorActionPreference = "Stop"

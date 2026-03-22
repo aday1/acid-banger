@@ -12,6 +12,8 @@ export type VerticalFaderOpts = {
     accent?: string;
     /** Short caption under the track (e.g. "Lv"). */
     label?: string;
+    /** Accessible name for the slider (visible label stays short). */
+    ariaLabel?: string;
 };
 
 export function VerticalFader(
@@ -65,9 +67,9 @@ export function VerticalFader(
 
         const v = denorm(normalized);
         const [lo, hi] = bounds;
-        wrap.setAttribute("aria-valuemin", String(lo));
-        wrap.setAttribute("aria-valuemax", String(hi));
-        wrap.setAttribute("aria-valuenow", String(Math.round(v * 1000) / 1000));
+        track.setAttribute("aria-valuemin", String(lo));
+        track.setAttribute("aria-valuemax", String(hi));
+        track.setAttribute("aria-valuenow", String(Math.round(v * 1000) / 1000));
     }
 
     function emit() {
@@ -138,7 +140,11 @@ export function VerticalFader(
         }
     });
 
-    wrap.setAttribute("role", "slider");
+    track.setAttribute("role", "slider");
+    track.setAttribute(
+        "aria-label",
+        opts?.ariaLabel ?? "Level"
+    );
     paint();
     requestAnimationFrame(() => paint());
 

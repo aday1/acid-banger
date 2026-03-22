@@ -34,8 +34,10 @@ if (-not (Test-Path -LiteralPath $ps)) {
     exit 1
 }
 
+# Do not append "%1" here. Passing the URL (acid-banger-linkbridge://...) as an extra
+# argument after -File confuses PowerShell or binds badly; the script ignores the URL anyway.
 $launch = "`"$ps`" -NoProfile -ExecutionPolicy Bypass -WindowStyle Normal -File `"$startScript`""
-$command = "$launch `"%1`""
+$command = $launch
 
 New-Item -Path $hive -Force | Out-Null
 Set-ItemProperty -LiteralPath $hive -Name "(default)" -Value "URL:Acid Banger Link bridge"
@@ -47,5 +49,8 @@ Set-ItemProperty -LiteralPath $open -Name "(default)" -Value $command
 
 Write-Host "Registered $proto:// (current user only)."
 Write-Host "  In the app: use the Start link-bridge link under Clock sync when Ableton Link is selected."
-Write-Host "  Or open:  ${proto}://start"
+Write-Host "  Or Win+R:  ${proto}://start"
 Write-Host "Start script: $startScript"
+Write-Host ""
+Write-Host "If the link still does nothing: allow the app when the browser prompts; re-run this script"
+Write-Host "from the repo root after moving the folder (paths are stored in the registry)."

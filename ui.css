@@ -684,10 +684,13 @@ a {
 .controls {
     display: flex;
     flex-wrap: wrap;
+    align-items: flex-start;
 }
 
 .control-group {
-    height: 100px;
+    min-height: 100px;
+    height: auto;
+    box-sizing: border-box;
 }
 
 .control-group .group {
@@ -799,6 +802,13 @@ button.waiting {
 
 .autopilot-button.on {
     animation: autopilot-animate 2s infinite;
+}
+
+.mixer-panel {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
 }
 
 .mixer-panel .group {

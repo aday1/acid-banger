@@ -5,7 +5,9 @@
 param(
     [switch]$SkipInstall,
     [switch]$Clean,
-    [switch]$IgnorePythonCheck
+    [switch]$IgnorePythonCheck,
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$ProtocolLaunchArgs
 )
 
 $ErrorActionPreference = "Stop"

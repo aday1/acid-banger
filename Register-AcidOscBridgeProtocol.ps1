@@ -34,8 +34,9 @@ if (-not (Test-Path -LiteralPath $ps)) {
     exit 1
 }
 
+# Omit "%1" so the custom URL is not passed as a stray -File argument (see Link bridge register script).
 $launch = "`"$ps`" -NoProfile -ExecutionPolicy Bypass -WindowStyle Normal -File `"$startScript`""
-$command = "$launch `"%1`""
+$command = $launch
 
 New-Item -Path $hive -Force | Out-Null
 Set-ItemProperty -LiteralPath $hive -Name "(default)" -Value "URL:Acid Banger OSC bridge"

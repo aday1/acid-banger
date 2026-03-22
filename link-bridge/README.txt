@@ -50,6 +50,15 @@ Start bridge from the browser (Windows, optional)
     powershell -ExecutionPolicy Bypass -File .\Register-AcidLinkBridgeProtocol.ps1
   Unregister: add -Unregister to that command.
 
+  If the in-page link does nothing: click Allow / Open when the browser asks;
+  run the Register script again from your current repo folder if you moved it
+  (the registry stores full paths). Fallback: Win+R, paste
+    acid-banger-linkbridge://start
+  then Enter.
+
+  After updating the repo, run Register again once if the link still fails
+  (the registry stores the full path to Start-LinkBridge.ps1).
+
 PowerShell helper (install + start):
   powershell -ExecutionPolicy Bypass -File .\Start-LinkBridge.ps1
   Skip reinstall:       .\Start-LinkBridge.ps1 -SkipInstall

@@ -469,9 +469,13 @@ function DelayControls(delayUnit, colorHost, midiMenu) {
     });
     return controlGroup(label("Delay"), dialRow);
 }
-function mixerStripLevelFader(level, colorHost, midiId, midiMenu) {
+function mixerStripLevelFader(level, colorHost, midiId, midiMenu, busName) {
     const c = readUiColorVars(colorHost);
-    const f = VerticalFader(level.bounds, { accent: c.dial, label: "Lv" });
+    const f = VerticalFader(level.bounds, {
+        accent: c.dial,
+        label: "Lv",
+        ariaLabel: `${busName} bus level`,
+    });
     f.bind((v) => {
         level.value = v;
     });
@@ -518,7 +522,7 @@ function MixerPanel(state, colorHost, midiMenu) {
         nm.title = `${name} bus`;
         const faderCell = document.createElement("div");
         faderCell.classList.add("mixer-fader-cell");
-        faderCell.append(mixerStripLevelFader(strip.level, colorHost, `mixer.strip${i}.level`, midiMenu));
+        faderCell.append(mixerStripLevelFader(strip.level, colorHost, `mixer.strip${i}.level`, midiMenu, name));
         const muteBtn = toggleButton(strip.mute, {
             classes: ["mixer-mute-btn"],
             midiTargetId: `mixer.strip${i}.mute`,
@@ -831,6 +835,10 @@ function SyncAndMidiPanel(clock) {
     protoLink.href = "acid-banger-linkbridge://start";
     protoLink.innerText =
         "Start link-bridge on this PC (after Register-AcidLinkBridgeProtocol.ps1)";
+    const protoTrouble = document.createElement("div");
+    protoTrouble.classList.add("sync-hint", "link-bridge-protocol-trouble");
+    protoTrouble.innerText =
+        "If the link does nothing: allow opening the app when the browser asks; re-run Register-AcidLinkBridgeProtocol.ps1 from this repo after moving the folder; or Win+R and paste acid-banger-linkbridge://start then Enter.";
     const stepsTitle = document.createElement("div");
     stepsTitle.classList.add("link-bridge-steps-title");
     stepsTitle.innerText = "Quick start";
@@ -856,7 +864,7 @@ function SyncAndMidiPanel(clock) {
     const cmdPre = document.createElement("pre");
     cmdPre.classList.add("link-bridge-cmd");
     cmdPre.textContent = "cd link-bridge\nnpm install\nnpm start";
-    linkGuide.append(linkIntro, docLink, protoHint, protoLink, stepsTitle, steps, cmdLabel, cmdPre);
+    linkGuide.append(linkIntro, docLink, protoHint, protoLink, protoTrouble, stepsTitle, steps, cmdLabel, cmdPre);
     const linkGrid = document.createElement("div");
     linkGrid.classList.add("osc-host-port-grid");
     const lhCell = document.createElement("div");
