@@ -59,6 +59,8 @@ function createAbletonLinkTransport(bpm, getWsUrl, onStatus) {
     let reconnectTimer = null;
     let lastRemoteBpm = -1;
     let lastGridStep = -1;
+    /** True while applyFrame is writing BPM from Link (blocks setBpm echo to WebSocket). */
+    let applyingLinkBpm = false;
     function teardownSocket() {
         if (socket) {
             socket.onopen = null;
@@ -77,8 +79,16 @@ function createAbletonLinkTransport(bpm, getWsUrl, onStatus) {
         const rawBpm = typeof data.bpm === "number" ? data.bpm : bpm.value;
         lastRemoteBpm = rawBpm;
         const [lo, hi] = bpm.bounds;
-        const rounded = Math.round(rawBpm);
-        bpm.value = Math.max(lo, Math.min(hi, rounded));
+        const rounded = Math.max(lo, Math.min(hi, Math.round(rawBpm)));
+        if (rounded !== bpm.value) {
+            applyingLinkBpm = true;
+            try {
+                bpm.value = rounded;
+            }
+            finally {
+                applyingLinkBpm = false;
+            }
+        }
         const sixteenthsInQuantum = q * 4;
         const gridStep = Math.floor(ph * sixteenthsInQuantum + 1e-9) % 16;
         if (gridStep !== lastGridStep) {
@@ -88,7 +98,10 @@ function createAbletonLinkTransport(bpm, getWsUrl, onStatus) {
         }
         const peers = typeof data.peers === "number" ? data.peers : 0;
         const play = data.playing !== false;
-        onStatus(`Link: ${rounded} BPM | peers ${peers}${play ? "" : " | transport stopped"}`);
+        const wsN = typeof data.wsClients === "number" ? data.wsClients : 0;
+        const beatStr = typeof data.beat === "number" ? data.beat.toFixed(2) : "?";
+        onStatus(`Link: ${rounded} BPM | Link peers ${peers} | beat ${beatStr} phase ${ph.toFixed(3)} | quantum ${q} | WS clients ${wsN}` +
+            (play ? "" : "\ntransport stopped (Link)"));
     }
     function connect() {
         if (reconnectTimer !== null) {
@@ -141,7 +154,9 @@ function createAbletonLinkTransport(bpm, getWsUrl, onStatus) {
             connect();
         },
         setBpm(proposed) {
-            if (Math.abs(proposed - lastRemoteBpm) < 0.08)
+            if (applyingLinkBpm)
+                return;
+            if (Math.abs(proposed - lastRemoteBpm) < 0.45)
                 return;
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({ cmd: "setBpm", value: proposed }));
@@ -154,6 +169,7 @@ function createAbletonLinkTransport(bpm, getWsUrl, onStatus) {
             }
             teardownSocket();
             lastGridStep = -1;
+            lastRemoteBpm = -1;
         },
     };
 }

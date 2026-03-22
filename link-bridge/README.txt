@@ -75,16 +75,24 @@ PowerShell helper (install + start):
   Wipe node_modules:    .\Start-LinkBridge.ps1 -Clean
   Skip Python preflight: .\Start-LinkBridge.ps1 -IgnorePythonCheck
 
+HTTP status page (local):
+  With npm start running, open http://127.0.0.1:<port>/ on this PC for a small
+  dashboard: BPM, playing, Link peers, WebSocket client count, beat, phase,
+  quantum. Default HTTP port is LINK_WS_PORT + 1 (e.g. 10000 when WS is 9999).
+  The page listens on 127.0.0.1 only. Override with LINK_HTTP_PORT.
+
 Environment:
-  LINK_WS_PORT   WebSocket port (default 9999). Match "Link WS port" in the app.
+  LINK_WS_PORT    WebSocket port (default 9999). Match "Link WS port" in the app.
+  LINK_HTTP_PORT  HTTP dashboard port (default WS+1). Must differ from WS port.
 
 In acid-banger choose sync mode "Ableton Link", set WebSocket host (e.g.
 127.0.0.1) and port, then start Live or another Link-enabled app on the same
-network. Tempo and phase align to the Link session; the BPM dial can propose
-session tempo when you adjust it.
+network. Tempo and phase align to the Link session; the BPM dial proposes
+session tempo when you change it (the app no longer echoes every Link frame back
+to the bridge, which used to fight tempo).
 
 Protocol (server to browser, repeated ~50/s):
-  {"type":"link","beat":...,"phase":0..1,"bpm":...,"quantum":4,"peers":n,"playing":bool}
+  {"type":"link","beat":...,"phase":0..1,"bpm":...,"quantum":4,"peers":n,"playing":bool,"wsClients":n}
 
 Browser to server:
   {"cmd":"setBpm","value":128}

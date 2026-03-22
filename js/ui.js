@@ -839,6 +839,25 @@ function SyncAndMidiPanel(clock) {
     protoTrouble.classList.add("sync-hint", "link-bridge-protocol-trouble");
     protoTrouble.innerText =
         "If the link does nothing: allow opening the app when the browser asks; re-run Register-AcidLinkBridgeProtocol.ps1 from this repo after moving the folder; or Win+R and paste acid-banger-linkbridge://start then Enter.";
+    const linkDash = document.createElement("a");
+    linkDash.classList.add("link-bridge-doc-link");
+    linkDash.target = "_blank";
+    linkDash.rel = "noopener noreferrer";
+    linkDash.innerText =
+        "Open bridge status page (live BPM, Link peers, beat/phase, WebSocket client count)";
+    function syncLinkDashHref() {
+        const h = clock.linkWsHost.value.trim() || "127.0.0.1";
+        const p = parseInt(clock.linkWsPort.value.trim(), 10);
+        const wsP = Number.isFinite(p) && p > 0 ? p : 9999;
+        linkDash.href = `http://${h}:${wsP + 1}/`;
+    }
+    clock.linkWsHost.subscribe(syncLinkDashHref);
+    clock.linkWsPort.subscribe(syncLinkDashHref);
+    syncLinkDashHref();
+    const linkDashHint = document.createElement("div");
+    linkDashHint.classList.add("sync-hint");
+    linkDashHint.innerText =
+        "While npm start runs in link-bridge: HTTP status uses WS port + 1 by default (set LINK_HTTP_PORT to override).";
     const stepsTitle = document.createElement("div");
     stepsTitle.classList.add("link-bridge-steps-title");
     stepsTitle.innerText = "Quick start";
@@ -848,7 +867,7 @@ function SyncAndMidiPanel(clock) {
         "Clone or open the acid-banger repo on disk.",
         "In a terminal: cd link-bridge",
         "Run npm install (needs Python + C++ build tools for the native addon; see README if this fails).",
-        "Run npm start — leave this terminal open. Default WebSocket port is 9999.",
+        "Run npm start - leave this terminal open. Default WebSocket port is 9999.",
         "Set Link WS host and port here to match (localhost is 127.0.0.1).",
         "Select Ableton Link above; wait for status to show connected.",
         "Launch Ableton Live or another Link app on the same LAN so tempo and phase align.",
@@ -864,7 +883,7 @@ function SyncAndMidiPanel(clock) {
     const cmdPre = document.createElement("pre");
     cmdPre.classList.add("link-bridge-cmd");
     cmdPre.textContent = "cd link-bridge\nnpm install\nnpm start";
-    linkGuide.append(linkIntro, docLink, protoHint, protoLink, protoTrouble, stepsTitle, steps, cmdLabel, cmdPre);
+    linkGuide.append(linkIntro, docLink, protoHint, protoLink, protoTrouble, linkDash, linkDashHint, stepsTitle, steps, cmdLabel, cmdPre);
     const linkGrid = document.createElement("div");
     linkGrid.classList.add("osc-host-port-grid");
     const lhCell = document.createElement("div");
@@ -915,7 +934,7 @@ function SyncAndMidiPanel(clock) {
     const hint = document.createElement("div");
     hint.classList.add("sync-hint");
     hint.innerText =
-        "Internal: built-in tempo. MIDI master: clock + acid MIDI out. MIDI slave: MIDI clock in. Ableton Link: start link-bridge (Node) on your machine, then use the fields above — the browser does not load Link by itself.";
+        "Internal: built-in tempo. MIDI master: clock + acid MIDI out. MIDI slave: MIDI clock in. Ableton Link: start link-bridge (Node) on your machine, then use the fields above - the browser does not load Link by itself.";
     body.append(modes, linkRow, status, hint);
     box.append(title, body);
     return box;
