@@ -1,86 +1,75 @@
-# The Endless Acid Banger
+# The Endless Acid Banger (fork)
 
-An algorithmic human-computer techno jam
+**The Endless Acid Banger** is an algorithmic human–computer techno jam: music and patterns are generated in the browser with TypeScript and the Web Audio API. The on-screen dials, pattern views, and autopilot switches can be driven by hand or left to the algorithm.
 
 ![Screenshot](https://github.com/vitling/acid-banger/blob/main/preview.png?raw=true)
 
-Built in TypeScript with the Web Audio API.
-
-**Original live version (Vitling):** [www.vitling.xyz/toys/acid-banger](https://www.vitling.xyz/toys/acid-banger)
+**Vitling’s original build (unchanged upstream toy):**  
+[www.vitling.xyz/toys/acid-banger](https://www.vitling.xyz/toys/acid-banger)
 
 ---
 
-## This repository: CC BY fork by aday
+## What this Git repository is
 
-This repo is **[github.com/aday1/acid-banger](https://github.com/aday1/acid-banger)** — a **derivative fork** of [Vitling’s The Endless Acid Banger](https://github.com/vitling/acid-banger). It is **not** the upstream author’s release; it adds integration and tooling on top of the same **Creative Commons Attribution 4.0 International** ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)) basis. If you share or build on this code or the music it makes, **credit Vitling and the original project**, and credit this fork where appropriate.
+This tree is **[github.com/aday1/acid-banger](https://github.com/aday1/acid-banger)** — a **fork** of [Vitling’s repository](https://github.com/vitling/acid-banger). It is **not** Vitling’s official release; it keeps the same **[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)** license spirit: reuse is allowed with **attribution to Vitling and the original project**, and to this fork when redistributing this variant.
 
-Upstream describes the piece as an art project, not a traditional music product. This fork extends it for sync, MIDI, and external control while keeping that lineage explicit.
+Vitling has described the original as an art project rather than a conventional music product, and has welcomed others to fork and extend it. This fork adds sync, MIDI, OSC, packaging, and documentation on top of that original idea.
 
-### Features added in this fork (summary)
+### What aday added on top of Vitling’s version
 
-Compared to the upstream browser toy, this fork includes:
+| Area | Addition |
+|------|-----------|
+| **Build** | Root `npm run build` (TypeScript → `js/`, webpack → `dist/`), `npm run dev` / `watch`, `build.ps1` / `build.sh`. |
+| **Clock** | **Internal** (original-style clock), **MIDI master** / **slave**, **Ableton Link** via local Node **`link-bridge`** + WebSocket; in-app Link guide and `link-bridge-README.txt` in `dist/` after build. |
+| **MIDI** | Device pickers, acid lines mirrored to MIDI out **channels 1–2**, **MIDI learn/forget** (right-click controls, CC/note, `localStorage` key `acid-banger-midi-map-v1`). |
+| **OSC** | Browser client plus **`bridge/`** Node relay (UDP ↔ WebSocket); panel text for TouchOSC-style UDP vs WebSocket; `bridge-README.txt` in `dist/` after build. |
+| **Windows** | **`Launch-AcidBanger.ps1`** (build, serve, Chrome, desktop shortcut). **`link-bridge/Start-LinkBridge.ps1`** for the Link bridge. |
+| **UI** | Sync / MIDI / OSC panels, fork credit in `index.html`, CSS theme variables. |
 
-| Area | What was added |
-|------|----------------|
-| **Build** | Root `npm run build` (TypeScript to `js/`, webpack bundle to `dist/`), `npm run dev` / `watch`, `build.ps1` / `build.sh`. |
-| **Clock sync** | **Internal** (original behaviour), **MIDI master** (clock + start out), **MIDI slave** (clock in, BPM estimate on dial), **Ableton Link** (via local Node **link-bridge** + WebSocket; in-app setup guide + copied `link-bridge-README.txt` in `dist/`). |
-| **MIDI devices** | Web MIDI input/output selection, refresh, shared input for slave clock + learn. |
-| **MIDI mirror** | Acid lines sent to MIDI **out** on **channels 1 and 2** when driving external gear. |
-| **MIDI learn / forget** | **Right-click** knobs, triggers, toggles, BPM, volume, delay, mutes, autopilot: map **CC** or **note** per control; list + forget / clear all in the MIDI panel; **`localStorage`** key `acid-banger-midi-map-v1`. |
-| **OSC** | Browser client + **`bridge/`** Node relay (UDP in/out, WebSocket to the page). In-app help for **TouchOSC-style UDP** vs **WebSocket**; **`dist/bridge-README.txt`** after build. Optional **Emit step** / **Emit BPM** to a UDP target. |
-| **Windows launcher** | **`Launch-AcidBanger.ps1`**: build, serve `dist/`, open Chrome, optional desktop shortcut **Endless Acid Banger**. |
-| **Link bridge helper** | **`link-bridge/Start-LinkBridge.ps1`**: install + run the Ableton Link WebSocket bridge (native `abletonlink`; needs Python + C++ build tools on Windows). |
-| **UI / docs** | MIDI and sync panels, OSC explanations, fork credit in **`index.html`**, themed CSS variables. |
-
-Upstream remains the source of the core musical idea, UI layout, and WebAudio patch; this fork layers transport, MIDI, OSC, packaging, and documentation around it.
+The core musical behaviour, layout, and WebAudio patch still trace to Vitling’s upstream work; the fork layers transport and integration around that core.
 
 ---
 
 ## Quick start (this fork)
 
 1. Install **Node 18+** and run **`npm install`** in the repo root.
-2. Add 909 samples next to the HTML source if you use them: `909BD.mp3`, `909OH.mp3`, `909CH.mp3`, `909SD.mp3` (webpack copies them into `dist/` when present).
+2. Optional: add `909BD.mp3`, `909OH.mp3`, `909CH.mp3`, `909SD.mp3` beside the HTML sources; webpack copies them into `dist/` when present.
 3. **Build:** `npm run build` (Windows: `build.ps1`). Output: **`dist/`**.
 4. Serve **`dist/`** over HTTP. Web MIDI needs **`https://`** or **`localhost`**.
-5. **Develop:** `npm run watch` (and webpack watch if configured), or rebuild and use **`npm run dev`** (build + static server; port may vary if 5173 is busy).
+5. **Develop:** `npm run watch`, or rebuild and use **`npm run dev`** (static server; port may differ if 5173 is in use).
 
-**Windows one-shot:** run **`Launch-AcidBanger.ps1`** from the repo root (creates/updates a desktop shortcut unless you pass **`-SkipShortcut`**).
-
----
-
-## Sync and MIDI (detail)
-
-- **Internal:** built-in clock (same idea as original).
-- **MIDI master:** MIDI clock (24 ppqn) + Start; BPM from the dial; acid lines mirrored to MIDI out ch **1–2**.
-- **MIDI slave:** step on incoming clock; BPM estimate updates the dial (delay time follows). Select **MIDI input** in the panel.
-- **Ableton Link:** run **`link-bridge`** on your machine (`link-bridge/README.txt`, or **`Start-LinkBridge.ps1`**). In the app: **Ableton Link**, WebSocket host/port (default **127.0.0.1** / **9999**). After build, open **`link-bridge-README.txt`** from **`dist/`** via the Clock sync panel link.
-
-### MIDI learn and per-control mappings
-
-One MIDI input handles **slave clock** and **learn** together.
-
-- **Right-click** a control → **MIDI learn** or **MIDI forget**; then move a **CC** or play a **note on** to learn.
-- **Numeric:** CC or note scaled across parameter range. **Toggles:** CC threshold 64; notes toggle. **Triggers:** note on fires; CC on upward crossing through 64.
-- **MIDI devices** panel: mapping list, per-row forget, **Clear all**, **Cancel learn** while waiting.
-- Storage: **`localStorage`** `acid-banger-midi-map-v1`.
+On Windows, **`Launch-AcidBanger.ps1`** from the repo root can build, serve, open Chrome, and refresh the **Endless Acid Banger** desktop shortcut (omit **`-SkipShortcut`** only when a shortcut is not wanted).
 
 ---
 
-## OSC bridge (detail)
+## Sync and MIDI (reference)
 
-Browsers do not speak OSC over UDP natively. The **`bridge/`** Node process relays **UDP ↔ WebSocket JSON**. See **`bridge/README.txt`** (and **`dist/bridge-README.txt`** after build); the OSC panel links it and explains **WebSocket (browser ↔ Node)** vs **UDP (TouchOSC, Max, etc.)**.
+- **Internal:** built-in tempo (original-style).
+- **MIDI master:** clock + start out; BPM from the dial; mirror to out ch **1–2**.
+- **MIDI slave:** clock in; BPM estimate on the dial; pick **MIDI input** in the panel.
+- **Ableton Link:** run **`link-bridge`** (see `link-bridge/README.txt` or **`Start-LinkBridge.ps1`**). In the app: **Ableton Link**, host **127.0.0.1**, port **9999** by default. The Clock sync panel links **`link-bridge-README.txt`** from `dist/` after a build.
 
----
+### MIDI learn
 
-## Original author — support and license (Vitling)
-
-You can support Vitling’s work by [Sponsoring on GitHub](https://github.com/sponsors/vitling) or [buying music](https://music.vitling.xyz) / [Bandcamp](https://edgenetwork.bandcamp.com/album/edge001-spaceport-lounge-music).
-
-Vitling’s original README notes the project is offered as finished art and may not accept feature-driven PRs upstream; **forks are explicitly welcome** for further creative work.
-
-This work is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). That applies to the original composition/code and to this fork’s changes: use and remix with **attribution** to the original source (Vitling and the upstream project) and, for this tree, appropriate mention of the fork maintainer if you redistribute this version.
+One input serves both slave clock and learn. **Right-click** a control for learn/forget; mappings are listed in the MIDI panel. Details: CC vs note behaviour, **`acid-banger-midi-map-v1`** in **`localStorage`**.
 
 ---
 
-**Fork maintainer:** **aday** — [github.com/aday1/acid-banger](https://github.com/aday1/acid-banger)  
-**Upstream:** **Vitling** — [vitling.xyz](https://www.vitling.xyz) · [github.com/vitling/acid-banger](https://github.com/vitling/acid-banger)
+## OSC bridge (reference)
+
+Browsers do not expose OSC UDP directly. The **`bridge/`** Node app relays **UDP ↔ WebSocket JSON**. See **`bridge/README.txt`** and the in-page OSC section; after build, **`dist/bridge-README.txt`**.
+
+---
+
+## Vitling — support, license, upstream
+
+Vitling’s work can be supported via [GitHub Sponsors](https://github.com/sponsors/vitling) and [music releases](https://music.vitling.xyz) / [Bandcamp](https://edgenetwork.bandcamp.com/album/edge001-spaceport-lounge-music).
+
+The project is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). That covers the original work and this fork’s changes: attribute Vitling and the upstream project, and this repository when sharing this fork’s tree.
+
+**Upstream:** [vitling.xyz](https://www.vitling.xyz) · [github.com/vitling/acid-banger](https://github.com/vitling/acid-banger)  
+**This fork:** [github.com/aday1/acid-banger](https://github.com/aday1/acid-banger) · maintained by **aday**
+
+---
+
+Thanks to **Vitling** for the original **Endless Acid Banger** — the playful core that made this fork worth building on.
