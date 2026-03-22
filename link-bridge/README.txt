@@ -22,7 +22,10 @@ Windows (if npm install fails with node-gyp / Python errors)
 
   1. Install Python 3 from https://www.python.org/downloads/
      Use the installer option to add Python to PATH. Close and reopen the terminal.
-  2. Install "Build Tools for Visual Studio" with workload
+  2. Install MSVC build tools (node-gyp needs cl.exe):
+     From an elevated PowerShell in this folder:
+       powershell -ExecutionPolicy Bypass -File .\Install-VCTools.ps1
+     Or install "Build Tools for Visual Studio" with workload
      "Desktop development with C++" (MSVC, Windows SDK).
      https://visualstudio.microsoft.com/visual-cpp-build-tools/
   3. Prefer Node.js 20 or 22 LTS if builds fail on a bleeding-edge Node version (e.g. Node 24+).
@@ -38,6 +41,14 @@ Setup:
   cd link-bridge
   npm install
   npm start
+
+Start bridge from the browser (Windows, optional)
+-------------------------------------------------
+  Browsers cannot run Node or the native Link addon by themselves. Optional:
+  register a URL protocol once from the repo root, then use the in-page link
+  under Clock sync when Ableton Link is selected.
+    powershell -ExecutionPolicy Bypass -File .\Register-AcidLinkBridgeProtocol.ps1
+  Unregister: add -Unregister to that command.
 
 PowerShell helper (install + start):
   powershell -ExecutionPolicy Bypass -File .\Start-LinkBridge.ps1

@@ -280,7 +280,23 @@ export function Audio(au: AudioContext = new (window.AudioContext || window.webk
     }
 
     async function loadBuffer(filePath: string) {
-        const response = await fetch(filePath);
+        const url = new URL(filePath, document.baseURI).href;
+        let response: Response;
+        try {
+            response = await fetch(url);
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            const fileHint =
+                typeof location !== "undefined" && location.protocol === "file:"
+                    ? " Open this app via http:// using Launch-AcidBanger.ps1 (or npm run dev), not by double-clicking index.html."
+                    : "";
+            throw new Error(`Failed to fetch ${filePath} (${url}): ${msg}.${fileHint}`);
+        }
+        if (!response.ok) {
+            throw new Error(
+                `Failed to load ${filePath} (${url}): HTTP ${response.status} ${response.statusText}`
+            );
+        }
         const arraybuffer = await response.arrayBuffer();
 
         const audioBuffer = await decodeAudioDataCompatible(arraybuffer);

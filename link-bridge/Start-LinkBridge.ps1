@@ -60,9 +60,19 @@ if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
 Show-NodeVersionWarning
 
 if ($Clean -and (Test-Path -LiteralPath (Join-Path $Root "node_modules"))) {
+    $nm = Join-Path $Root "node_modules"
     Write-Host "Clean: removing link-bridge/node_modules..."
     Write-Host "  (helps EPERM and half-built native addons)"
-    Remove-Item -LiteralPath (Join-Path $Root "node_modules") -Recurse -Force -ErrorAction Stop
+    try {
+        Remove-Item -LiteralPath $nm -Recurse -Force -ErrorAction Stop
+    } catch {
+        Write-Warning "PowerShell could not delete node_modules (often a lock). Trying cmd rmdir..."
+        $p = Start-Process -FilePath "cmd.exe" -ArgumentList @("/c", "rmdir /s /q `"$nm`"") -Wait -PassThru -NoNewWindow
+        if (($p.ExitCode -ne 0) -or (Test-Path -LiteralPath $nm)) {
+            Write-Error "Still could not remove node_modules. Close Cursor/terminals/antivirus hooks on that folder, then run -Clean again."
+            exit 1
+        }
+    }
     Write-Host "Done."
     Write-Host ""
 }

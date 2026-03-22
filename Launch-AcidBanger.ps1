@@ -1,17 +1,7 @@
 #requires -Version 5.1
-<#
-.SYNOPSIS
-  Build The Endless Acid Banger, serve dist/, open in Google Chrome, and keep a desktop shortcut.
-
-.PARAMETER SkipBuild
-  Skip npm run build (reuse existing dist/).
-
-.PARAMETER SkipShortcut
-  Do not create or update the desktop shortcut (useful when running from a dev terminal often).
-
-.PARAMETER Port
-  HTTP port for npx serve (default 5173).
-#>
+# Build The Endless Acid Banger, serve dist/, open in Google Chrome, optional desktop shortcut.
+# If the default port is taken by another app, this script picks a free port and serves there
+# so you do not get a broken page (missing CSS / wrong app).
 param(
     [switch]$SkipBuild,
     [switch]$SkipShortcut,
@@ -34,6 +24,30 @@ function Test-LocalPortOpen {
     }
 }
 
+function Test-AcidBangerStaticServer {
+    param([int]$P)
+    try {
+        $r = Invoke-WebRequest -Uri "http://127.0.0.1:$P/ui.css" -UseBasicParsing -TimeoutSec 3
+        if ($r.StatusCode -ne 200) { return $false }
+        $ct = [string]$r.Headers["Content-Type"]
+        if ($ct -notmatch "text/css") { return $false }
+        if ($r.Content -notmatch "--acid-page-bg") { return $false }
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Find-FreeTcpPort {
+    param([int]$Start, [int]$End)
+    for ($p = $Start; $p -le $End; $p++) {
+        if (-not (Test-LocalPortOpen -P $p)) {
+            return $p
+        }
+    }
+    return $null
+}
+
 function Get-ChromePath {
     $paths = @(
         (Join-Path $env:ProgramFiles "Google\Chrome\Application\chrome.exe"),
@@ -54,6 +68,14 @@ function Get-ChromePath {
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
     Write-Error "npm not found. Install Node.js 18+ and ensure npm is on PATH."
     exit 1
+}
+
+if (-not (Test-Path -LiteralPath (Join-Path $Root "node_modules"))) {
+    Write-Host "First-time setup: npm install"
+    npm install
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
 }
 
 if (-not $SkipShortcut) {
@@ -80,23 +102,50 @@ if (-not $SkipBuild) {
     Write-Host "SkipBuild: using existing dist/"
 }
 
-$baseUrl = "http://127.0.0.1:$Port/"
+if (-not (Test-Path -LiteralPath (Join-Path $Root "dist\index.html"))) {
+    Write-Error "dist/index.html missing. Run without -SkipBuild or run: npm run build"
+    exit 1
+}
 
-if (-not (Test-LocalPortOpen -P $Port)) {
-    Write-Host "Starting static server on port $Port ..."
-    $arg = "/c cd /d `"$Root`" && npx --yes serve dist -p $Port"
-    Start-Process -FilePath "cmd.exe" -ArgumentList $arg -WindowStyle Hidden
-    $deadline = (Get-Date).AddSeconds(20)
-    while (-not (Test-LocalPortOpen -P $Port)) {
-        if ((Get-Date) -gt $deadline) {
-            Write-Error "Server did not become ready on port $Port. Is the port in use?"
+$preferred = $Port
+$usePort = $null
+$startServer = $false
+
+if (Test-LocalPortOpen -P $preferred) {
+    if (Test-AcidBangerStaticServer -P $preferred) {
+        $usePort = $preferred
+        Write-Host "Port $preferred already serves this app; reusing it."
+    } else {
+        Write-Warning "Port $preferred is in use but /ui.css is not this build (another server on that port)."
+        $alt = Find-FreeTcpPort -Start ($preferred + 1) -End ($preferred + 80)
+        if ($null -eq $alt) {
+            Write-Error "No free TCP port between $($preferred + 1) and $($preferred + 80)."
             exit 1
         }
-        Start-Sleep -Milliseconds 250
+        $usePort = $alt
+        $startServer = $true
+        Write-Host "Will start this app on port $usePort instead."
     }
 } else {
-    Write-Host "Something is already listening on port $Port - opening that URL."
+    $usePort = $preferred
+    $startServer = $true
 }
+
+if ($startServer) {
+    Write-Host "Starting static server (minimized cmd): 127.0.0.1:$usePort"
+    $inner = "cd /d `"$Root`" && npm exec -- serve dist -l tcp://127.0.0.1:$usePort -n"
+    Start-Process -FilePath "cmd.exe" -ArgumentList @("/k", $inner) -WindowStyle Minimized
+    $deadline = (Get-Date).AddSeconds(25)
+    while (-not (Test-AcidBangerStaticServer -P $usePort)) {
+        if ((Get-Date) -gt $deadline) {
+            Write-Error "Server did not serve /ui.css on port $usePort. Restore the minimized cmd window to read errors."
+            exit 1
+        }
+        Start-Sleep -Milliseconds 300
+    }
+}
+
+$baseUrl = "http://127.0.0.1:$usePort/"
 
 $chrome = Get-ChromePath
 if ($chrome) {
@@ -107,4 +156,5 @@ if ($chrome) {
     Start-Process $baseUrl
 }
 
-Write-Host "Done. Close the hidden cmd window running npx serve when finished. If the port was already in use, no new server was started."
+Write-Host "Done. URL: $baseUrl"
+Write-Host "Close the minimized cmd window running 'serve' when finished."

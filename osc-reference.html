@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSC reference – Acid Banger</title>
+    <link rel="stylesheet" href="ui.css">
+    <style>
+        .osc-ref {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 12px 16px 48px;
+            box-sizing: border-box;
+        }
+        .osc-ref h1 {
+            font-size: 1.1rem;
+            letter-spacing: 0.06em;
+            color: var(--acid-accent);
+            margin: 0 0 8px 0;
+        }
+        .osc-ref h2 {
+            font-size: 0.95rem;
+            margin: 22px 0 8px 0;
+            color: var(--acid-text);
+            border-bottom: 1px solid var(--acid-panel-border);
+            padding-bottom: 4px;
+        }
+        .osc-ref p, .osc-ref li {
+            font-size: 0.8rem;
+            line-height: 1.45;
+            color: var(--acid-text);
+            margin: 8px 0;
+        }
+        .osc-ref .back {
+            margin-bottom: 16px;
+        }
+        .osc-ref .back a {
+            color: var(--acid-note);
+        }
+        .osc-ref table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            margin: 10px 0;
+        }
+        .osc-ref th, .osc-ref td {
+            border: 1px solid var(--acid-panel-border);
+            padding: 8px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        .osc-ref th {
+            color: var(--acid-accent);
+            background: #0a0a12;
+        }
+        .osc-ref code, .osc-ref pre {
+            font-family: monospace;
+            font-size: 0.78em;
+            background: #0a0a12;
+            border: 1px solid var(--acid-panel-border);
+            padding: 2px 5px;
+        }
+        .osc-ref pre {
+            display: block;
+            padding: 10px 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .osc-ref .flow {
+            color: var(--acid-note);
+            font-size: 0.78rem;
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 3px solid var(--acid-dial);
+            background: #0a0a12;
+        }
+        .osc-ref ul { padding-left: 1.2rem; }
+    </style>
+</head>
+<body>
+<div class="osc-ref">
+    <div class="back"><a href="index.html">Back to Acid Banger</a></div>
+    <h1>OSC reference (fork)</h1>
+    <p>
+        This page lists IP/port roles, which OSC addresses the app sends and receives,
+        and how the fields in the OSC panel map to them. You must run
+        <code>bridge/server.mjs</code> (see <a href="bridge-README.txt" target="_blank" rel="noopener">bridge README</a>)
+        and enable <strong>Connect OSC bridge</strong> in the app.
+    </p>
+
+    <div class="flow">
+        <strong>Data flow (defaults)</strong><br>
+        TouchOSC / Max / etc. &rarr; <strong>UDP</strong> to your PC <strong>port 57121</strong> &rarr; Node bridge &rarr;
+        <strong>WebSocket</strong> <code>ws://127.0.0.1:8765</code> &rarr; this browser tab.<br>
+        Outgoing from the app: tab &rarr; WebSocket &rarr; bridge &rarr; <strong>UDP</strong> to the <strong>target IP:port</strong> you set (e.g. 127.0.0.1:9000).
+    </div>
+
+    <h2>Where to set IP and ports (OSC panel)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>OSC panel label</th>
+                <th>Typical value</th>
+                <th>What it is</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Bridge machine (host)</td>
+                <td>127.0.0.1</td>
+                <td>Host for the <strong>WebSocket</strong> connection to Node. Use the PC’s LAN IP if the bridge runs on another machine. You can put a full URL here, e.g. <code>ws://127.0.0.1:8765</code>, instead of host + port.</td>
+            </tr>
+            <tr>
+                <td>WebSocket port</td>
+                <td>8765</td>
+                <td>Must match the bridge env <code>OSC_WS_PORT</code> (default 8765). This is <strong>not</strong> the port TouchOSC uses.</td>
+            </tr>
+            <tr>
+                <td>Bridge OSC UDP listen port</td>
+                <td>57121</td>
+                <td>Reminder label only: external OSC apps must send UDP to this port on the machine running the bridge. Match <code>OSC_UDP_PORT</code> (default 57121).</td>
+            </tr>
+            <tr>
+                <td>Target IP / host</td>
+                <td>127.0.0.1</td>
+                <td>UDP destination for messages <strong>from the app</strong> (/acid/step, /acid/bpm). Often localhost or another app on your LAN.</td>
+            </tr>
+            <tr>
+                <td>Target UDP port</td>
+                <td>9000 (example)</td>
+                <td>UDP port on that host. Your DAW or OSC tool must listen here for outgoing acid-banger traffic.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Bridge environment variables (optional)</h2>
+    <p>When starting <code>server.mjs</code>:</p>
+    <pre>OSC_UDP_PORT=57121   # UDP listen (OSC into the bridge)
+OSC_WS_PORT=8765       # WebSocket port for the browser</pre>
+
+    <h2>Incoming OSC (into the browser)</h2>
+    <p>
+        Any OSC message received on the bridge’s <strong>UDP listen port</strong> is forwarded to the page as one WebSocket text frame of JSON:
+    </p>
+    <pre>{"address":"/your/address","args":[1,2,3]}</pre>
+    <p>
+        The <strong>OSC in (last message)</strong> line in the app shows a short preview of every message.
+        The sequencer <strong>only</strong> acts on tempo from addresses that match the rules below.
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>OSC address</th>
+                <th>Arguments</th>
+                <th>Effect in the app</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>/acid/bpm</code></td>
+                <td>One number (float): BPM</td>
+                <td>Sets the BPM dial, clamped to the app’s tempo range (70–200).</td>
+            </tr>
+            <tr>
+                <td>Any address ending with <code>/bpm</code><br>(e.g. <code>/live/set/tempo/bpm</code>)</td>
+                <td>First argument: BPM as a number</td>
+                <td>Same as above: first float is applied as BPM (clamped).</td>
+            </tr>
+            <tr>
+                <td>Any other address</td>
+                <td>Any</td>
+                <td>No built-in action; preview only in <strong>OSC in (last message)</strong>.</td>
+            </tr>
+        </tbody>
+    </table>
+    <p>
+        <strong>Configure your sender:</strong> destination IP = machine running the bridge (e.g. <code>127.0.0.1</code> on the same PC, or your PC’s Wi‑Fi IP from a phone). Destination UDP port = <code>OSC_UDP_PORT</code> (default <strong>57121</strong>).
+    </p>
+
+    <h2>Outgoing OSC (from the browser)</h2>
+    <p>
+        When the WebSocket is connected, the page can ask the bridge to send UDP packets. The built-in toggles only send these addresses to your <strong>Target IP</strong> and <strong>Target UDP port</strong>:
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th>OSC address</th>
+                <th>When it is sent</th>
+                <th>Arguments</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>/acid/step</code></td>
+                <td>While <strong>Emit OSC /acid/step</strong> is on, each 16th step</td>
+                <td>One float: current step index 0–15 (transport division in the app).</td>
+            </tr>
+            <tr>
+                <td><code>/acid/bpm</code></td>
+                <td>While <strong>Emit OSC /acid/bpm</strong> is on, when BPM changes</td>
+                <td>One float: current BPM.</td>
+            </tr>
+        </tbody>
+    </table>
+    <p>
+        The Node bridge encodes all arguments as OSC floats. There is no UI yet to define custom addresses; adding more would require a code change in the app (or another layer listening on the same UDP port).
+    </p>
+
+    <h2>WebSocket command (for custom tools)</h2>
+    <p>From any WebSocket client connected to the bridge, you can send UDP by JSON:</p>
+    <pre>{"cmd":"oscSend","address":"/foo","args":[1,2],"remoteHost":"127.0.0.1","remotePort":9000}</pre>
+    <p>The bridge forwards one OSC message with float arguments to <code>remoteHost:remotePort</code>.</p>
+
+    <h2>Quick checklist</h2>
+    <ul>
+        <li>Bridge running: console shows UDP and WebSocket ports.</li>
+        <li>App: Connect OSC bridge on; WebSocket host/port match the bridge.</li>
+        <li>Into the app: send OSC UDP to <strong>bridge machine : OSC_UDP_PORT</strong> (57121).</li>
+        <li>Out of the app: set target host/port; enable emit toggles for /acid/step and/or /acid/bpm.</li>
+    </ul>
+</div>
+</body>
+</html>

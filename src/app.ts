@@ -45,6 +45,31 @@ import {
     getMidiOutputById,
 } from "./midi-helpers.js";
 
+function wireMixerAudio(
+    state: ProgramState,
+    gainNodes: [GainNode, GainNode, GainNode]
+): void {
+    function refresh(): void {
+        const anySolo = state.mixer.strips.some((s) => s.solo.value);
+        for (let i = 0; i < 3; i++) {
+            const st = state.mixer.strips[i];
+            let v = st.level.value;
+            if (st.mute.value) {
+                v = 0;
+            } else if (anySolo && !st.solo.value) {
+                v = 0;
+            }
+            gainNodes[i].gain.value = v;
+        }
+    }
+    for (const st of state.mixer.strips) {
+        st.level.subscribe(refresh);
+        st.mute.subscribe(refresh);
+        st.solo.subscribe(refresh);
+    }
+    refresh();
+}
+
 function WanderingParameter(param: NumericParameter, scaleFactor = 1 / 400) {
     const [min, max] = param.bounds;
 
@@ -133,13 +158,14 @@ function ThreeOhUnit(
     };
 }
 
-async function NineOhUnit(audio: AudioT): Promise<NineOhMachine> {
-    const drums = await audio.SamplerDrumMachine([
-        "909BD.mp3",
-        "909OH.mp3",
-        "909CH.mp3",
-        "909SD.mp3",
-    ]);
+async function NineOhUnit(
+    audio: AudioT,
+    drumBus: AudioNode = audio.master.in
+): Promise<NineOhMachine> {
+    const drums = await audio.SamplerDrumMachine(
+        ["909BD.mp3", "909OH.mp3", "909CH.mp3", "909SD.mp3"],
+        drumBus
+    );
     const pattern = genericParameter<DrumPattern>("Drum Pattern", []);
     const mutes = [
         genericParameter("Mute BD", false),
@@ -358,7 +384,15 @@ function buildClock(
 }
 
 async function start() {
+    if (typeof location !== "undefined" && location.protocol === "file:") {
+        throw new Error(
+            "Cannot load drum samples from a file:// page (browser blocks fetch). Use http:// — run Launch-AcidBanger.ps1 from the repo or: npm run dev"
+        );
+    }
     const audio = Audio();
+    if (audio.context.state === "suspended") {
+        await audio.context.resume();
+    }
     let midiAccess: MIDIAccess | null = null;
     try {
         midiAccess = await navigator.requestMIDIAccess({ sysex: false });
@@ -402,6 +436,16 @@ async function start() {
     const delay = DelayUnit(audio);
     clock.bpm.subscribe((b) => (delay.delayTime.value = (3 / 4) * (60 / b)));
 
+    const strip303a = audio.context.createGain();
+    const strip303b = audio.context.createGain();
+    const strip909 = audio.context.createGain();
+    strip303a.gain.value = 1;
+    strip303b.gain.value = 1;
+    strip909.gain.value = 1;
+    strip303a.connect(delay.inputNode);
+    strip303b.connect(delay.inputNode);
+    strip909.connect(audio.master.in);
+
     const gen = ThreeOhGen();
 
     const oscEnabled = genericParameter("Connect OSC bridge", false);
@@ -417,10 +461,10 @@ async function start() {
 
     const programState: ProgramState = {
         notes: [
-            ThreeOhUnit(audio, "sawtooth", delay.inputNode, gen),
-            ThreeOhUnit(audio, "square", delay.inputNode, gen),
+            ThreeOhUnit(audio, "sawtooth", strip303a, gen),
+            ThreeOhUnit(audio, "square", strip303b, gen),
         ],
-        drums: await NineOhUnit(audio),
+        drums: await NineOhUnit(audio, strip909),
         gen,
         delay,
         clock,
@@ -441,7 +485,28 @@ async function start() {
             lastIncomingOsc: oscLastIn,
             status: oscStatus,
         },
+        mixer: {
+            strips: [
+                {
+                    level: parameter("303-01 level", [0, 1], 1),
+                    mute: genericParameter("303-01 mute", false),
+                    solo: genericParameter("303-01 solo", false),
+                },
+                {
+                    level: parameter("303-02 level", [0, 1], 1),
+                    mute: genericParameter("303-02 mute", false),
+                    solo: genericParameter("303-02 solo", false),
+                },
+                {
+                    level: parameter("909 level", [0, 1], 1),
+                    mute: genericParameter("909 mute", false),
+                    solo: genericParameter("909 solo", false),
+                },
+            ],
+        },
     };
+
+    wireMixerAudio(programState, [strip303a, strip303b, strip909]);
 
     programState.masterVolume.subscribe((newVolume) => {
         audio.master.in.gain.value = newVolume;

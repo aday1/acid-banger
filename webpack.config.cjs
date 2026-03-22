@@ -43,6 +43,11 @@ module.exports = {
           to: "bridge-README.txt",
           noErrorOnMissing: true,
         },
+        {
+          from: "osc-reference.html",
+          to: "osc-reference.html",
+          noErrorOnMissing: true,
+        },
       ],
     }),
   ],

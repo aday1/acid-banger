@@ -5,7 +5,131 @@
 */
 import { textNoteToNumber } from "./audio.js";
 import { Dial } from "./dial.js";
+import { VerticalFader } from "./fader.js";
 import { midiPortMapHasId } from "./midi-helpers.js";
+function syncModeRoleLabel(mode) {
+    switch (mode) {
+        case "internal":
+            return "Internal (master)";
+        case "midi-master":
+            return "MIDI master";
+        case "midi-slave":
+            return "MIDI slave";
+        case "ableton-link":
+            return "Ableton Link";
+        default:
+            return String(mode);
+    }
+}
+function createBpmTempoHeader(clock) {
+    const wrap = document.createElement("div");
+    wrap.classList.add("bpm-tempo-header");
+    wrap.setAttribute("role", "status");
+    wrap.setAttribute("aria-live", "polite");
+    wrap.setAttribute("aria-atomic", "true");
+    const bpmEl = document.createElement("span");
+    bpmEl.classList.add("bpm-tempo-header-bpm");
+    const sep = document.createElement("span");
+    sep.classList.add("bpm-tempo-header-sep");
+    sep.innerText = " — ";
+    const modeEl = document.createElement("span");
+    modeEl.classList.add("bpm-tempo-header-mode");
+    const right = document.createElement("div");
+    right.classList.add("bpm-tempo-header-right");
+    const leds = document.createElement("div");
+    leds.classList.add("bpm-beat-leds");
+    leds.title =
+        "Quarter notes in the 16-step bar: bright = downbeat (step 1).";
+    const ledEls = [];
+    for (let i = 0; i < 4; i++) {
+        const dot = document.createElement("span");
+        dot.classList.add("bpm-beat-led");
+        dot.setAttribute("aria-hidden", "true");
+        leds.append(dot);
+        ledEls.push(dot);
+    }
+    const tapWrap = document.createElement("div");
+    tapWrap.classList.add("bpm-tap-wrap");
+    const tapBtn = document.createElement("button");
+    tapBtn.type = "button";
+    tapBtn.classList.add("bpm-tap-btn");
+    tapBtn.innerText = "TAP";
+    tapBtn.title =
+        "Tap tempo in time with the music. Beat 1-4 shows your place in the bar; BPM updates from your tap spacing (after two or more taps).";
+    const tapBeat = document.createElement("span");
+    tapBeat.classList.add("bpm-tap-beat-num");
+    tapBeat.setAttribute("aria-live", "polite");
+    tapWrap.append(tapBtn, tapBeat);
+    function refresh() {
+        bpmEl.textContent = `${Math.round(clock.bpm.value)} BPM`;
+        modeEl.textContent = syncModeRoleLabel(clock.syncMode.value);
+    }
+    clock.bpm.subscribe(refresh);
+    clock.syncMode.subscribe(refresh);
+    refresh();
+    function syncBeatLeds(step) {
+        const q = step % 4;
+        for (let i = 0; i < 4; i++) {
+            const on = i === q;
+            ledEls[i].classList.toggle("bpm-beat-led--on", on);
+            ledEls[i].classList.toggle("bpm-beat-led--downbeat", on && step === 0);
+        }
+    }
+    let flashTimer = null;
+    function pulseTransportFlash(isDownbeat) {
+        if (flashTimer !== null) {
+            window.clearTimeout(flashTimer);
+            flashTimer = null;
+        }
+        wrap.classList.remove("bpm-tempo-header-flash-downbeat", "bpm-tempo-header-flash-beat");
+        void wrap.offsetWidth;
+        wrap.classList.add(isDownbeat
+            ? "bpm-tempo-header-flash-downbeat"
+            : "bpm-tempo-header-flash-beat");
+        flashTimer = window.setTimeout(() => {
+            wrap.classList.remove("bpm-tempo-header-flash-downbeat", "bpm-tempo-header-flash-beat");
+            flashTimer = null;
+        }, isDownbeat ? 160 : 110);
+    }
+    let stepFlashReady = false;
+    clock.currentStep.subscribe((step) => {
+        syncBeatLeds(step);
+        if (stepFlashReady && step % 4 === 0) {
+            pulseTransportFlash(step === 0);
+        }
+        stepFlashReady = true;
+    });
+    const TAP_GAP_MS = 2200;
+    let tapTimes = [];
+    tapBtn.addEventListener("click", () => {
+        const now = performance.now();
+        tapTimes = tapTimes.filter((t) => now - t < TAP_GAP_MS);
+        tapTimes.push(now);
+        const beatInBar = ((tapTimes.length - 1) % 4) + 1;
+        tapBeat.textContent = String(beatInBar);
+        tapBeat.classList.remove("bpm-tap-beat-num--pop");
+        void tapBeat.offsetWidth;
+        tapBeat.classList.add("bpm-tap-beat-num--pop");
+        window.setTimeout(() => {
+            tapBeat.classList.remove("bpm-tap-beat-num--pop");
+        }, 280);
+        if (tapTimes.length >= 2) {
+            const gaps = [];
+            for (let i = 1; i < tapTimes.length; i++) {
+                gaps.push(tapTimes[i] - tapTimes[i - 1]);
+            }
+            const avg = gaps.reduce((a, b) => a + b, 0) / Math.max(1, gaps.length);
+            if (avg >= 200 && avg <= 900) {
+                const nextBpm = Math.round(60000 / avg);
+                const [lo, hi] = clock.bpm.bounds;
+                clock.bpm.value = Math.max(lo, Math.min(hi, nextBpm));
+            }
+        }
+    });
+    right.append(leds, tapWrap);
+    wrap.append(bpmEl, sep, modeEl, right);
+    return wrap;
+}
 function createMidiTargetContextMenu(cb) {
     let menu = null;
     let globalsBound = false;
@@ -122,8 +246,12 @@ function DialSet(parameters, colorHost, opts) {
         return { dial: c.dial, text: c.text };
     };
     params.forEach((param, i) => {
+        var _a;
         const cols = applyDialColors();
-        const dial = Dial(param.bounds, param.name, cols.dial, cols.text);
+        const dialLabel = ((_a = opts === null || opts === void 0 ? void 0 : opts.dialShortLabels) === null || _a === void 0 ? void 0 : _a[i]) !== undefined
+            ? opts.dialShortLabels[i]
+            : param.name;
+        const dial = Dial(param.bounds, dialLabel, cols.dial, cols.text);
         dial.bind((v) => {
             param.value = v;
         });
@@ -137,6 +265,8 @@ function DialSet(parameters, colorHost, opts) {
         }
         if (midiId && (opts === null || opts === void 0 ? void 0 : opts.midiMenu)) {
             opts.midiMenu.attach(dial.element, midiId);
+            dial.element.title =
+                "Drag to set level. Right-click: MIDI learn or forget mapping.";
         }
         container.append(dial.element);
     });
@@ -162,10 +292,17 @@ function triggerButton(target, opts) {
     return but;
 }
 function toggleButton(param, opts) {
-    var _a;
+    var _a, _b;
     const button = document.createElement("button");
+    button.type = "button";
     button.classList.add(...((_a = opts === null || opts === void 0 ? void 0 : opts.classes) !== null && _a !== void 0 ? _a : []));
-    button.innerText = param.name;
+    button.innerText = (_b = opts === null || opts === void 0 ? void 0 : opts.labelOverride) !== null && _b !== void 0 ? _b : param.name;
+    if (opts === null || opts === void 0 ? void 0 : opts.title) {
+        button.title = opts.title;
+    }
+    if (opts === null || opts === void 0 ? void 0 : opts.ariaLabel) {
+        button.setAttribute("aria-label", opts.ariaLabel);
+    }
     const mid = opts === null || opts === void 0 ? void 0 : opts.midiTargetId;
     if (mid && (opts === null || opts === void 0 ? void 0 : opts.midiMenu)) {
         opts.midiMenu.attach(button, mid);
@@ -331,6 +468,104 @@ function DelayControls(delayUnit, colorHost, midiMenu) {
         midiMenu,
     });
     return controlGroup(label("Delay"), dialRow);
+}
+function mixerStripLevelFader(level, colorHost, midiId, midiMenu) {
+    const c = readUiColorVars(colorHost);
+    const f = VerticalFader(level.bounds, { accent: c.dial, label: "Lv" });
+    f.bind((v) => {
+        level.value = v;
+    });
+    level.subscribe((v) => {
+        f.value = v;
+    });
+    midiMenu.attach(f.element, midiId);
+    f.element.title =
+        "Drag vertically for level (up = louder). Right-click: MIDI learn or forget mapping.";
+    return f.element;
+}
+function MixerPanel(state, colorHost, midiMenu) {
+    const stripNames = ["303-01", "303-02", "909"];
+    const desk = document.createElement("div");
+    desk.classList.add("mixer-desk");
+    const header = document.createElement("div");
+    header.classList.add("mixer-grid-header");
+    const hBus = document.createElement("span");
+    hBus.innerText = "Bus";
+    const hLvl = document.createElement("span");
+    hLvl.innerText = "Level";
+    hLvl.title =
+        "Per-bus gain into delay (303) or master (909). MIDI: right-click fader.";
+    const hM = document.createElement("span");
+    hM.classList.add("mixer-col-m");
+    hM.innerText = "M";
+    hM.title = "Mute";
+    const hS = document.createElement("span");
+    hS.classList.add("mixer-col-s");
+    hS.innerText = "S";
+    hS.title = "Solo";
+    header.append(hBus, hLvl, hM, hS);
+    desk.append(header);
+    state.mixer.strips.forEach((strip, i) => {
+        var _a;
+        const name = (_a = stripNames[i]) !== null && _a !== void 0 ? _a : `ch${i}`;
+        const row = document.createElement("div");
+        row.classList.add("mixer-strip-row");
+        row.setAttribute("role", "group");
+        row.setAttribute("aria-label", `Mixer ${name}`);
+        const nm = document.createElement("div");
+        nm.classList.add("mixer-strip-name");
+        nm.innerText = name;
+        nm.title = `${name} bus`;
+        const faderCell = document.createElement("div");
+        faderCell.classList.add("mixer-fader-cell");
+        faderCell.append(mixerStripLevelFader(strip.level, colorHost, `mixer.strip${i}.level`, midiMenu));
+        const muteBtn = toggleButton(strip.mute, {
+            classes: ["mixer-mute-btn"],
+            midiTargetId: `mixer.strip${i}.mute`,
+            midiMenu,
+            labelOverride: "M",
+            title: `${name} mute. Click toggles. Right-click: MIDI learn / forget.`,
+            ariaLabel: `${name} mute`,
+        });
+        const soloBtn = toggleButton(strip.solo, {
+            classes: ["mixer-solo-btn"],
+            midiTargetId: `mixer.strip${i}.solo`,
+            midiMenu,
+            labelOverride: "S",
+            title: `${name} solo. Click toggles. Right-click: MIDI learn / forget.`,
+            ariaLabel: `${name} solo`,
+        });
+        row.append(nm, faderCell, muteBtn, soloBtn);
+        desk.append(row);
+    });
+    const hint = document.createElement("div");
+    hint.classList.add("sync-hint", "mixer-hint");
+    hint.innerText =
+        "Level is per bus before master volume. Mute silences a bus. Solo: when any solo is on, only soloed buses are heard (mute still wins on that bus). Both 303s feed the delay; 909 is post-delay.";
+    const midiBlock = document.createElement("div");
+    midiBlock.classList.add("mixer-midi-block");
+    const midiTitle = document.createElement("div");
+    midiTitle.classList.add("mixer-midi-title");
+    midiTitle.innerText = "MIDI control";
+    const midiP = document.createElement("div");
+    midiP.classList.add("sync-hint", "mixer-midi-intro");
+    midiP.innerText =
+        "Right-click a level fader or M / S buttons, choose MIDI learn this control, then move a hardware fader or pad. CC maps level (0–127) or mute/solo (>=64 on). Notes toggle mute/solo. Use the MIDI devices panel to see mappings or forget.";
+    const midiDetails = document.createElement("details");
+    midiDetails.classList.add("mixer-midi-details");
+    const midiSum = document.createElement("summary");
+    midiSum.innerText = "Target IDs (for reference)";
+    const midiPre = document.createElement("pre");
+    midiPre.classList.add("mixer-midi-ids");
+    midiPre.textContent = stripNames
+        .map((n, i) => {
+        const b = `mixer.strip${i}`;
+        return `${n}:\n  ${b}.level\n  ${b}.mute\n  ${b}.solo`;
+    })
+        .join("\n\n");
+    midiDetails.append(midiSum, midiPre);
+    midiBlock.append(midiTitle, midiP, midiDetails);
+    return controlGroup(label("Mixer"), group(desk, hint, midiBlock), "mixer-panel");
 }
 const autopilotMidiIds = [
     "ap.alterPatterns",
@@ -587,6 +822,15 @@ function SyncAndMidiPanel(clock) {
     docLink.rel = "noopener noreferrer";
     docLink.innerText =
         "Open link-bridge README (build requirements, LINK_WS_PORT, protocol)";
+    const protoHint = document.createElement("div");
+    protoHint.classList.add("sync-hint", "link-bridge-protocol-hint");
+    protoHint.innerText =
+        "The page cannot run Node by itself. On Windows you can register a one-time URL handler, then use the link below to launch Start-LinkBridge.ps1 from the browser.";
+    const protoLink = document.createElement("a");
+    protoLink.classList.add("link-bridge-doc-link");
+    protoLink.href = "acid-banger-linkbridge://start";
+    protoLink.innerText =
+        "Start link-bridge on this PC (after Register-AcidLinkBridgeProtocol.ps1)";
     const stepsTitle = document.createElement("div");
     stepsTitle.classList.add("link-bridge-steps-title");
     stepsTitle.innerText = "Quick start";
@@ -612,7 +856,7 @@ function SyncAndMidiPanel(clock) {
     const cmdPre = document.createElement("pre");
     cmdPre.classList.add("link-bridge-cmd");
     cmdPre.textContent = "cd link-bridge\nnpm install\nnpm start";
-    linkGuide.append(linkIntro, docLink, stepsTitle, steps, cmdLabel, cmdPre);
+    linkGuide.append(linkIntro, docLink, protoHint, protoLink, stepsTitle, steps, cmdLabel, cmdPre);
     const linkGrid = document.createElement("div");
     linkGrid.classList.add("osc-host-port-grid");
     const lhCell = document.createElement("div");
@@ -668,6 +912,15 @@ function SyncAndMidiPanel(clock) {
     box.append(title, body);
     return box;
 }
+function oscBridgeReadmeLink(text) {
+    const a = document.createElement("a");
+    a.href = "bridge-README.txt";
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.classList.add("osc-bridge-readme-link");
+    a.innerText = text;
+    return a;
+}
 function oscTextField(labelText, param) {
     const row = document.createElement("div");
     row.classList.add("osc-field-row");
@@ -694,6 +947,16 @@ function OscPanel(state) {
     const title = document.createElement("div");
     title.classList.add("sync-panel-title");
     title.innerText = "OSC (via Node bridge)";
+    const refLinkRow = document.createElement("div");
+    refLinkRow.classList.add("osc-reference-link-row");
+    const refPageLink = document.createElement("a");
+    refPageLink.href = "osc-reference.html";
+    refPageLink.target = "_blank";
+    refPageLink.rel = "noopener noreferrer";
+    refPageLink.classList.add("osc-bridge-readme-link");
+    refPageLink.innerText =
+        "OSC reference page: addresses, ports, incoming and outgoing messages";
+    refLinkRow.append(refPageLink);
     const body = document.createElement("div");
     body.classList.add("sync-panel-body");
     const en = document.createElement("div");
@@ -701,14 +964,20 @@ function OscPanel(state) {
     en.append(toggleButton(state.osc.enabled, { classes: ["osc-toggle"] }));
     const readmeRow = document.createElement("div");
     readmeRow.classList.add("osc-bridge-readme-row");
-    const readmeLink = document.createElement("a");
-    readmeLink.href = "bridge-README.txt";
-    readmeLink.target = "_blank";
-    readmeLink.rel = "noopener noreferrer";
-    readmeLink.classList.add("osc-bridge-readme-link");
-    readmeLink.innerText =
-        "Open bridge/README.txt (install server.mjs, UDP port, WebSocket)";
+    const readmeLink = oscBridgeReadmeLink("Open bridge README (install server.mjs, UDP + WebSocket ports)");
     readmeRow.append(readmeLink);
+    const oscProtoHint = document.createElement("div");
+    oscProtoHint.classList.add("sync-hint", "osc-bridge-protocol-hint");
+    oscProtoHint.innerText =
+        "The page cannot start Node by itself. On Windows, run Register-AcidOscBridgeProtocol.ps1 once from the repo root, then:";
+    const oscProtoLink = document.createElement("a");
+    oscProtoLink.classList.add("osc-bridge-readme-link");
+    oscProtoLink.href = "acid-banger-oscbridge://start";
+    oscProtoLink.innerText =
+        "Start OSC bridge on this PC (registered protocol)";
+    const oscProtoRow = document.createElement("div");
+    oscProtoRow.classList.add("osc-bridge-proto-row");
+    oscProtoRow.append(oscProtoHint, oscProtoLink);
     const plainHelp = document.createElement("div");
     plainHelp.classList.add("osc-plain-help");
     const helpTitle = document.createElement("div");
@@ -716,8 +985,7 @@ function OscPanel(state) {
     helpTitle.innerText = "What is WebSocket vs UDP? (TouchOSC, etc.)";
     const p1 = document.createElement("div");
     p1.classList.add("sync-hint", "osc-plain-p");
-    p1.innerText =
-        "Browsers cannot speak OSC over UDP. The Node program bridge/server.mjs runs on your computer and relays messages. The status line that says connected to Node at 127.0.0.1 port 8765 is only the link from this tab to that program. ws:// just means WebSocket on your machine; you do not type that into TouchOSC.";
+    p1.append(document.createTextNode("Browsers cannot speak OSC over UDP. The Node program bridge/server.mjs runs on your computer; see "), oscBridgeReadmeLink("bridge README"), document.createTextNode(" for setup. The status line about connecting to Node at 127.0.0.1 port 8765 is this tab's WebSocket to the bridge. ws:// is not what you type in TouchOSC."));
     const p2 = document.createElement("div");
     p2.classList.add("sync-hint", "osc-plain-p");
     p2.innerText =
@@ -819,25 +1087,36 @@ function OscPanel(state) {
     const emitNote = document.createElement("div");
     emitNote.classList.add("sync-hint");
     emitNote.innerText =
-        "Emit step: sends /acid/step with 16th index. Emit BPM: sends /acid/bpm when tempo changes. Both use the UDP target above.";
+        "Emit step: /acid/step (one float, step 0–15). Emit BPM: /acid/bpm when tempo changes. Both go to Target IP/port above. Full tables: OSC reference page link at top of this panel.";
     const st = document.createElement("div");
     st.classList.add("sync-status");
     state.osc.status.subscribe((t) => {
         st.innerText = t;
     });
+    const statusFoot = document.createElement("div");
+    statusFoot.classList.add("sync-hint", "osc-status-readme-foot");
+    statusFoot.append(document.createTextNode("Help: "), oscBridgeReadmeLink("Open bridge README"), document.createTextNode(" | Start bridge/server.mjs (or Start OSC bridge link) if status stays connecting or disconnected. "), (() => {
+        const a = document.createElement("a");
+        a.href = "osc-reference.html";
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.classList.add("osc-bridge-readme-link");
+        a.innerText = "OSC reference";
+        return a;
+    })(), document.createTextNode("."));
     const hint = document.createElement("div");
-    hint.classList.add("sync-hint");
-    hint.innerText =
-        "Run bridge/server.mjs (README link above). UDP goes in/out on the listen and target ports; the WebSocket fields are only for this page talking to Node.";
-    body.append(en, readmeRow, plainHelp, wsHead, wsGrid, udpRef, inHead, lastIn, outHead, outGrid, emitRow, emitNote, st, hint);
-    box.append(title, body);
+    hint.classList.add("sync-hint", "osc-bridge-foot-hint");
+    hint.append(document.createTextNode("Run "), oscBridgeReadmeLink("bridge/server.mjs"), document.createTextNode(" (details in "), oscBridgeReadmeLink("bridge README"), document.createTextNode("). UDP uses the listen and target ports; WebSocket host/port is only for this page talking to Node."));
+    body.append(en, readmeRow, oscProtoRow, plainHelp, wsHead, wsGrid, udpRef, inHead, lastIn, outHead, outGrid, emitRow, emitNote, st, statusFoot, hint);
+    box.append(title, refLinkRow, body);
     return box;
 }
 export function UI(state, autoPilot, analyser, midiAccess, midiCallbacks) {
     const ui = document.createElement("div");
     ui.id = "ui";
+    const tempoHeader = createBpmTempoHeader(state.clock);
     const midiTargetMenu = createMidiTargetContextMenu(midiCallbacks);
-    const otherControls = controls(MidiDevicesPanel(state.clock, midiAccess, state, midiCallbacks), SyncAndMidiPanel(state.clock), OscPanel(state), AutopilotControls(autoPilot, midiTargetMenu), NoteGen(state.gen, midiTargetMenu), DelayControls(state.delay, ui, midiTargetMenu), controlGroup(label("Clock"), DialSet([state.clock.bpm], ui, {
+    const otherControls = controls(MidiDevicesPanel(state.clock, midiAccess, state, midiCallbacks), SyncAndMidiPanel(state.clock), OscPanel(state), AutopilotControls(autoPilot, midiTargetMenu), NoteGen(state.gen, midiTargetMenu), DelayControls(state.delay, ui, midiTargetMenu), MixerPanel(state, ui, midiTargetMenu), controlGroup(label("Clock"), DialSet([state.clock.bpm], ui, {
         classes: ["horizontal"],
         midiIds: ["clock.bpm"],
         midiMenu: midiTargetMenu,
@@ -865,7 +1144,7 @@ export function UI(state, autoPilot, analyser, midiAccess, midiCallbacks) {
         midiMenu: midiTargetMenu,
     }), DrumDisplay(state.drums.pattern, state.drums.mutes, state.clock.currentStep, ui), Mutes(state.drums.mutes, ["drums.mute0", "drums.mute1", "drums.mute2", "drums.mute3"], midiTargetMenu)));
     machineContainer.append(...noteMachines, drumMachine);
-    ui.append(machineContainer, otherControls);
+    ui.append(tempoHeader, machineContainer, otherControls);
     return ui;
 }
 //# sourceMappingURL=ui.js.map

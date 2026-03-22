@@ -5,14 +5,6 @@ import { WebSocketServer } from "ws";
 const UDP_PORT = Number(process.env.OSC_UDP_PORT || 57121);
 const WS_PORT = Number(process.env.OSC_WS_PORT || 8765);
 
-const wss = new WebSocketServer({ port: WS_PORT });
-
-const oscPort = new osc.UDPPort({
-    localAddress: "0.0.0.0",
-    localPort: UDP_PORT,
-    metadata: true,
-});
-
 const clients = new Set();
 const udpSender = dgram.createSocket("udp4");
 
@@ -50,14 +42,14 @@ function sendOscUdp(address, args, remoteHost, remotePort) {
     });
 }
 
-oscPort.on("message", (msg) => {
-    broadcastJson({
-        address: msg.address,
-        args: (msg.args || []).map((a) => a.value),
-    });
+const wss = new WebSocketServer({ port: WS_PORT, host: "0.0.0.0" });
+wss.on("error", (err) => {
+    console.error("WebSocket listen failed:", err.message);
+    if (err.code === "EADDRINUSE") {
+        console.error("Port", WS_PORT, "is already in use. Stop the other process or set OSC_WS_PORT.");
+    }
+    process.exit(1);
 });
-
-oscPort.open();
 
 wss.on("connection", (ws) => {
     clients.add(ws);
@@ -75,9 +67,33 @@ wss.on("connection", (ws) => {
     ws.on("close", () => clients.delete(ws));
 });
 
-console.log(
-    "acid-banger OSC bridge: listen UDP",
-    UDP_PORT,
-    "WebSocket ws://127.0.0.1:" + WS_PORT,
-    "| browser sends oscSend -> UDP out"
-);
+wss.on("listening", () => {
+    console.log(
+        "acid-banger OSC bridge: UDP",
+        UDP_PORT,
+        "| WebSocket ws://127.0.0.1:" + WS_PORT,
+        "| browser JSON oscSend -> UDP out"
+    );
+});
+
+const oscPort = new osc.UDPPort({
+    localAddress: "0.0.0.0",
+    localPort: UDP_PORT,
+    metadata: true,
+});
+oscPort.on("error", (err) => {
+    console.error("UDP listen failed:", err.message);
+    if (err.code === "EADDRINUSE") {
+        console.error("Port", UDP_PORT, "is already in use. Stop the other process or set OSC_UDP_PORT.");
+    }
+    process.exit(1);
+});
+
+oscPort.on("message", (msg) => {
+    broadcastJson({
+        address: msg.address,
+        args: (msg.args || []).map((a) => a.value),
+    });
+});
+
+oscPort.open();

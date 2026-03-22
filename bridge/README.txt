@@ -1,6 +1,10 @@
 acid-banger OSC bridge
 ----------------------
 
+In the built app, open osc-reference.html (same folder as index.html) or use
+the "OSC reference page" link in the OSC panel for addresses, ports, and
+incoming/outgoing messages.
+
 Purpose: browsers cannot send or receive OSC over UDP directly. This Node
 process:
   - Listens for OSC on UDP (default 57121) and forwards each message to
@@ -12,6 +16,17 @@ Setup:
   cd bridge
   npm install
   npm start
+
+PowerShell (from bridge folder):
+  powershell -ExecutionPolicy Bypass -File .\Start-OscBridge.ps1
+  Skip reinstall:  .\Start-OscBridge.ps1 -SkipInstall
+  Wipe node_modules: .\Start-OscBridge.ps1 -Clean
+
+Start from the browser (Windows, optional):
+  From repo root once:
+    powershell -ExecutionPolicy Bypass -File .\Register-AcidOscBridgeProtocol.ps1
+  Then in the app OSC panel use "Start OSC bridge on this PC".
+  Unregister: add -Unregister to that command.
 
 Environment defaults (override as needed):
   OSC_UDP_PORT=57121   UDP port the bridge listens on for incoming OSC

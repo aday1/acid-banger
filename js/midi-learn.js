@@ -64,6 +64,38 @@ export function buildMidiTargetRegistry(state, autoPilot) {
             state.masterVolume.value = v;
         },
     });
+    const mixerLabels = ["303-01", "303-02", "909"];
+    state.mixer.strips.forEach((strip, i) => {
+        var _a;
+        const tag = (_a = mixerLabels[i]) !== null && _a !== void 0 ? _a : `ch${i}`;
+        m.set(`mixer.strip${i}.level`, {
+            id: `mixer.strip${i}.level`,
+            label: `${tag} mixer level`,
+            kind: "numeric",
+            bounds: strip.level.bounds,
+            set: (v) => {
+                strip.level.value = v;
+            },
+        });
+        m.set(`mixer.strip${i}.mute`, {
+            id: `mixer.strip${i}.mute`,
+            label: `${tag} mixer mute`,
+            kind: "bool",
+            set: (v) => {
+                strip.mute.value = v;
+            },
+            get: () => strip.mute.value,
+        });
+        m.set(`mixer.strip${i}.solo`, {
+            id: `mixer.strip${i}.solo`,
+            label: `${tag} mixer solo`,
+            kind: "bool",
+            set: (v) => {
+                strip.solo.value = v;
+            },
+            get: () => strip.solo.value,
+        });
+    });
     m.set("delay.dryWet", {
         id: "delay.dryWet",
         label: "Delay dry/wet",

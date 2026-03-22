@@ -22,6 +22,28 @@ import { buildMidiTargetRegistry, createMidiLearnController, } from "./midi-lear
 import { createAcidMidiMirror } from "./midi-mirror.js";
 import { attachOscBridgeClient } from "./osc-bridge.js";
 import { getFirstMidiInput, getFirstMidiOutput, getMidiInputById, getMidiOutputById, } from "./midi-helpers.js";
+function wireMixerAudio(state, gainNodes) {
+    function refresh() {
+        const anySolo = state.mixer.strips.some((s) => s.solo.value);
+        for (let i = 0; i < 3; i++) {
+            const st = state.mixer.strips[i];
+            let v = st.level.value;
+            if (st.mute.value) {
+                v = 0;
+            }
+            else if (anySolo && !st.solo.value) {
+                v = 0;
+            }
+            gainNodes[i].gain.value = v;
+        }
+    }
+    for (const st of state.mixer.strips) {
+        st.level.subscribe(refresh);
+        st.mute.subscribe(refresh);
+        st.solo.subscribe(refresh);
+    }
+    refresh();
+}
 function WanderingParameter(param, scaleFactor = 1 / 400) {
     const [min, max] = param.bounds;
     let diff = 0.0;
@@ -94,14 +116,9 @@ function ThreeOhUnit(audio, waveform, output, gen, patternLength = 16) {
         newPattern,
     };
 }
-function NineOhUnit(audio) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const drums = yield audio.SamplerDrumMachine([
-            "909BD.mp3",
-            "909OH.mp3",
-            "909CH.mp3",
-            "909SD.mp3",
-        ]);
+function NineOhUnit(audio_1) {
+    return __awaiter(this, arguments, void 0, function* (audio, drumBus = audio.master.in) {
+        const drums = yield audio.SamplerDrumMachine(["909BD.mp3", "909OH.mp3", "909CH.mp3", "909SD.mp3"], drumBus);
         const pattern = genericParameter("Drum Pattern", []);
         const mutes = [
             genericParameter("Mute BD", false),
@@ -280,7 +297,13 @@ function buildClock(midiAccess, midiInputId, midiOutputId, linkWsHost, linkWsPor
 }
 function start() {
     return __awaiter(this, void 0, void 0, function* () {
+        if (typeof location !== "undefined" && location.protocol === "file:") {
+            throw new Error("Cannot load drum samples from a file:// page (browser blocks fetch). Use http:// — run Launch-AcidBanger.ps1 from the repo or: npm run dev");
+        }
         const audio = Audio();
+        if (audio.context.state === "suspended") {
+            yield audio.context.resume();
+        }
         let midiAccess = null;
         try {
             midiAccess = yield navigator.requestMIDIAccess({ sysex: false });
@@ -313,6 +336,15 @@ function start() {
         const { clock, midiSlaveClockRef } = buildClock(midiAccess, midiInputId, midiOutputId, linkWsHost, linkWsPort, getMidiOutput, getMidiInput);
         const delay = DelayUnit(audio);
         clock.bpm.subscribe((b) => (delay.delayTime.value = (3 / 4) * (60 / b)));
+        const strip303a = audio.context.createGain();
+        const strip303b = audio.context.createGain();
+        const strip909 = audio.context.createGain();
+        strip303a.gain.value = 1;
+        strip303b.gain.value = 1;
+        strip909.gain.value = 1;
+        strip303a.connect(delay.inputNode);
+        strip303b.connect(delay.inputNode);
+        strip909.connect(audio.master.in);
         const gen = ThreeOhGen();
         const oscEnabled = genericParameter("Connect OSC bridge", false);
         const oscWsHost = genericParameter("osc ws host", "127.0.0.1");
@@ -326,10 +358,10 @@ function start() {
         const oscStatus = genericParameter("osc status", "");
         const programState = {
             notes: [
-                ThreeOhUnit(audio, "sawtooth", delay.inputNode, gen),
-                ThreeOhUnit(audio, "square", delay.inputNode, gen),
+                ThreeOhUnit(audio, "sawtooth", strip303a, gen),
+                ThreeOhUnit(audio, "square", strip303b, gen),
             ],
-            drums: yield NineOhUnit(audio),
+            drums: yield NineOhUnit(audio, strip909),
             gen,
             delay,
             clock,
@@ -350,7 +382,27 @@ function start() {
                 lastIncomingOsc: oscLastIn,
                 status: oscStatus,
             },
+            mixer: {
+                strips: [
+                    {
+                        level: parameter("303-01 level", [0, 1], 1),
+                        mute: genericParameter("303-01 mute", false),
+                        solo: genericParameter("303-01 solo", false),
+                    },
+                    {
+                        level: parameter("303-02 level", [0, 1], 1),
+                        mute: genericParameter("303-02 mute", false),
+                        solo: genericParameter("303-02 solo", false),
+                    },
+                    {
+                        level: parameter("909 level", [0, 1], 1),
+                        mute: genericParameter("909 mute", false),
+                        solo: genericParameter("909 solo", false),
+                    },
+                ],
+            },
         };
+        wireMixerAudio(programState, [strip303a, strip303b, strip909]);
         programState.masterVolume.subscribe((newVolume) => {
             audio.master.in.gain.value = newVolume;
         });

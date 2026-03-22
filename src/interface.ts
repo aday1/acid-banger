@@ -88,6 +88,13 @@ export type AutoPilotUnit = {
     switches: GeneralisedParameter<boolean>[]
 }
 
+/** One bus in the simple 303-1 / 303-2 / 909 mixer (level, mute, solo). */
+export type MixerStrip = {
+    level: NumericParameter;
+    mute: GeneralisedParameter<boolean>;
+    solo: GeneralisedParameter<boolean>;
+};
+
 export function genericParameter<T>(name: string, value: T): GeneralisedParameter<T> {
     let listeners: ParameterCallback<T>[] = [];
     const state = {value};
@@ -141,5 +148,8 @@ export type ProgramState = {
     midiLearn: {
         statusLine: GeneralisedParameter<string>;
         listEpoch: GeneralisedParameter<number>;
+    };
+    mixer: {
+        strips: [MixerStrip, MixerStrip, MixerStrip];
     };
 };

@@ -91,11 +91,13 @@ export function attachOscBridgeClient(state, bpm) {
         const url = buildWsUrl(state);
         if (!url) {
             osc.status.value =
-                "OSC bridge: set host (e.g. 127.0.0.1) and WS port (e.g. 8765) to match bridge/server.mjs";
+                "OSC bridge: set host (e.g. 127.0.0.1) and WS port (e.g. 8765) to match bridge/server.mjs (see bridge README link in the OSC panel).";
             return;
         }
         osc.status.value =
-            "OSC bridge: connecting to Node at " + describeBridgeSocket(url) + " …";
+            "OSC bridge: connecting to Node at " +
+                describeBridgeSocket(url) +
+                " (start bridge/server.mjs if this hangs; bridge README link in this panel)";
         try {
             socket = new WebSocket(url);
         }
@@ -117,7 +119,7 @@ export function attachOscBridgeClient(state, bpm) {
         };
         socket.onerror = () => {
             osc.status.value =
-                "OSC bridge: could not reach Node (wrong host/port, or bridge not running)";
+                "OSC bridge: could not reach Node (run bridge/server.mjs or use Start OSC bridge link; check host/port match OSC_WS_PORT, default 8765)";
         };
         socket.onmessage = (ev) => {
             if (typeof ev.data === "string") {

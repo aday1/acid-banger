@@ -6,10 +6,12 @@
     "build": "tsc -p . && webpack --config webpack.config.cjs",
     "watch": "tsc -p . --watch",
     "webpack:watch": "webpack --config webpack.config.cjs --mode development --watch",
-    "dev": "npm run build && npx --yes serve dist -p 5173"
+    "dev": "npm run build && npm exec -- serve dist -l tcp://127.0.0.1:5173 -n",
+    "serve:dist": "serve dist -n"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^12.0.2",
+    "serve": "^14.2.4",
     "typescript": "~5.6.3",
     "webpack": "^5.96.1",
     "webpack-cli": "^5.1.4"
