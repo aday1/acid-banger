@@ -49,6 +49,8 @@ Windows: BridgeLauncherPanel.ps1 (no browser needed)
     powershell -ExecutionPolicy Bypass -File .\BridgeLauncherPanel.ps1
   Launch-AcidBanger.ps1 opens it automatically unless you pass -NoBridgesPanel.
   A desktop shortcut "Acid Banger Bridges.lnk" is created next to the main app shortcut.
+  That shortcut must use PowerShell -STA (WinForms). If an old shortcut flashes and
+  closes, run Launch-AcidBanger.ps1 once to recreate it, or add -STA before -File in the shortcut.
 
 Start bridge from the browser (Windows, optional)
 -------------------------------------------------

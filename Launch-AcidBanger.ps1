@@ -99,7 +99,7 @@ if (-not $SkipShortcut) {
         $lnkBridges = Join-Path $desk "Acid Banger Bridges.lnk"
         $sc2 = $wsh.CreateShortcut($lnkBridges)
         $sc2.TargetPath = "powershell.exe"
-        $sc2.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$bridgePanel`""
+        $sc2.Arguments = "-NoProfile -STA -ExecutionPolicy Bypass -File `"$bridgePanel`""
         $sc2.WorkingDirectory = $Root
         $sc2.Description = "Start Ableton Link or OSC bridge (same as F9/F10 in launcher panel)"
         $sc2.Save()
@@ -180,6 +180,7 @@ if (-not $NoBridgesPanel -and (Test-Path -LiteralPath $bridgePanelScript)) {
     Start-Process -FilePath (Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe") `
         -ArgumentList @(
         "-NoProfile",
+        "-STA",
         "-ExecutionPolicy", "Bypass",
         "-WindowStyle", "Normal",
         "-File", $bridgePanelScript
