@@ -1,0 +1,30 @@
+Ableton Link bridge for acid-banger
+------------------------------------
+
+The browser cannot join an Ableton Link session directly. This small Node
+process links to Link using the native npm package "abletonlink" and streams
+timing to the page over WebSocket.
+
+Requirements (same as node-gyp native addons):
+  - Python 3.x on PATH (node-gyp)
+  - C++ build tools (Windows: Visual Studio Build Tools; Mac: Xcode CLI; Linux: build-essential)
+
+Setup:
+  cd link-bridge
+  npm install
+  npm start
+
+Environment:
+  LINK_WS_PORT   WebSocket port (default 9999). Match "Link WS port" in the app.
+
+In acid-banger choose sync mode "Ableton Link", set WebSocket host (e.g.
+127.0.0.1) and port, then start Live or another Link-enabled app on the same
+network. Tempo and phase align to the Link session; the BPM dial can propose
+session tempo when you adjust it.
+
+Protocol (server to browser, repeated ~50/s):
+  {"type":"link","beat":...,"phase":0..1,"bpm":...,"quantum":4,"peers":n,"playing":bool}
+
+Browser to server:
+  {"cmd":"setBpm","value":128}
+  {"cmd":"setQuantum","value":4}

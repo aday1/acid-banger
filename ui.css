@@ -6,8 +6,21 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Orbitron&display=swap');
 
+:root {
+    --acid-page-bg: #111;
+    --acid-pattern-bg: #222266;
+    --acid-note: #88aacc;
+    --acid-accent: #AA88CC;
+    --acid-glide: #CCAA88;
+    --acid-text: #CCCCFF;
+    --acid-highlight: rgba(255,255,255,0.2);
+    --acid-grid: rgba(255,255,255,0.2);
+    --acid-dial: #AA88CC;
+    --acid-panel-border: #444444;
+}
+
 body {
-    background-color: #111;
+    background-color: var(--acid-page-bg);
     color:white;
     font-family: Orbitron, monospace;
 }
@@ -16,7 +29,452 @@ body {
     max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
+}
 
+.machines {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+}
+
+@media (min-width: 900px) {
+    .machines {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (min-width: 1100px) {
+    .machines {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+
+.sync-panel-wide {
+    width: 100%;
+    flex-basis: 100%;
+    min-height: auto;
+    border: 1px solid var(--acid-panel-border);
+    background-color: #000;
+    margin: 5px;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.sync-panel-title {
+    font-size: 0.85em;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    color: var(--acid-text);
+}
+
+.sync-modes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    margin-bottom: 8px;
+    font-family: monospace;
+    font-size: 0.85em;
+}
+
+.sync-mode-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.sync-select-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+    font-family: monospace;
+    font-size: 0.85em;
+}
+
+.sync-select-label {
+    min-width: 5.5rem;
+}
+
+.sync-select {
+    flex: 1;
+    max-width: 28rem;
+    background: #111;
+    color: #fff;
+    border: 1px solid var(--acid-panel-border);
+    font-family: monospace;
+    padding: 4px;
+}
+
+.sync-refresh {
+    margin-top: 6px;
+    font-size: 0.8em;
+}
+
+.sync-status {
+    margin-top: 8px;
+    font-family: monospace;
+    font-size: 0.8em;
+    color: #aaa;
+    white-space: pre-wrap;
+}
+
+.sync-hint {
+    margin-top: 6px;
+    font-family: monospace;
+    font-size: 0.72em;
+    color: #777;
+    line-height: 1.35;
+}
+
+.osc-enable-row {
+    margin-bottom: 6px;
+}
+
+.osc-url-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+    font-family: monospace;
+    font-size: 0.85em;
+}
+
+.osc-url-input {
+    flex: 1;
+    max-width: 24rem;
+    background: #111;
+    color: #fff;
+    border: 1px solid var(--acid-panel-border);
+    padding: 4px;
+    font-family: monospace;
+}
+
+.intro-details {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.intro-details summary {
+    cursor: pointer;
+    margin: 0.5rem 0;
+}
+
+.midi-io-panel {
+    margin: 5px;
+    padding: 8px;
+    border: 1px solid var(--acid-panel-border);
+    background-color: #000;
+    box-sizing: border-box;
+}
+
+.midi-io-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+@media (min-width: 640px) {
+    .midi-io-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.midi-io-heading {
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--acid-text);
+    margin-bottom: 2px;
+}
+
+.midi-io-sub {
+    font-family: monospace;
+    font-size: 0.72em;
+    color: #888;
+    margin-bottom: 6px;
+    line-height: 1.3;
+}
+
+.midi-io-select {
+    width: 100%;
+    max-width: none;
+}
+
+.midi-learn-block {
+    margin: 10px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--acid-panel-border);
+}
+
+.midi-learn-head {
+    font-size: 0.85em;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    color: var(--acid-text);
+}
+
+.midi-learn-hint {
+    margin-bottom: 8px;
+}
+
+.midi-learn-status {
+    min-height: 1.2em;
+    font-family: monospace;
+    font-size: 0.8em;
+    color: #9cf;
+    margin-bottom: 6px;
+}
+
+.midi-learn-cancel {
+    display: none;
+    font-family: monospace;
+    font-size: 0.75em;
+    padding: 4px 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.midi-ctx-menu {
+    position: fixed;
+    z-index: 10000;
+    min-width: 220px;
+    padding: 4px 0;
+    background: #1a1a22;
+    border: 1px solid var(--acid-panel-border);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+}
+
+.midi-ctx-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 14px;
+    border: none;
+    background: transparent;
+    color: var(--acid-text);
+    font-family: monospace;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+
+.midi-ctx-item:hover {
+    background: rgba(170, 136, 204, 0.25);
+}
+
+.midi-map-scroll {
+    max-height: 180px;
+    overflow-y: auto;
+    margin-bottom: 8px;
+    padding: 4px 0;
+    border: 1px solid #333;
+    background: #0a0a0a;
+}
+
+.midi-map-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 8px;
+    font-family: monospace;
+    font-size: 0.75em;
+    border-bottom: 1px solid #222;
+}
+
+.midi-map-row:last-child {
+    border-bottom: none;
+}
+
+.midi-map-label {
+    flex: 1;
+    min-width: 0;
+    word-break: break-word;
+}
+
+.midi-map-forget {
+    flex-shrink: 0;
+    font-family: monospace;
+    font-size: 0.9em;
+    padding: 2px 8px;
+    cursor: pointer;
+}
+
+.midi-map-clear-all {
+    font-family: monospace;
+    font-size: 0.8em;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+.osc-bridge-readme-row {
+    margin-bottom: 8px;
+}
+
+.osc-bridge-readme-link {
+    font-family: monospace;
+    font-size: 0.78em;
+    color: #aaccee;
+    text-decoration: underline;
+}
+
+.osc-bridge-readme-link:hover {
+    color: #cceeff;
+}
+
+.osc-section-label {
+    margin-top: 10px;
+    margin-bottom: 4px;
+    font-size: 0.8em;
+    letter-spacing: 0.04em;
+    color: #aaa;
+    text-transform: uppercase;
+}
+
+.osc-host-port-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+@media (min-width: 520px) {
+    .osc-host-port-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.osc-hp-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-family: monospace;
+    font-size: 0.8em;
+}
+
+.osc-field-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 6px 0;
+}
+
+.osc-field-label-block {
+    font-family: monospace;
+    font-size: 0.75em;
+    color: #999;
+    line-height: 1.3;
+}
+
+.osc-field-input {
+    background: #111;
+    color: #fff;
+    border: 1px solid var(--acid-panel-border);
+    padding: 5px;
+    font-family: monospace;
+    font-size: 0.85em;
+}
+
+.osc-field-input-wide {
+    width: 100%;
+    max-width: 36rem;
+    box-sizing: border-box;
+}
+
+.osc-port-input {
+    max-width: 8rem;
+}
+
+.osc-last-in {
+    font-family: monospace;
+    font-size: 0.8em;
+    color: #ccc;
+    background: #111;
+    border: 1px solid var(--acid-panel-border);
+    padding: 6px;
+    min-height: 2.2em;
+    word-break: break-all;
+}
+
+.osc-emit-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.osc-emit-btn {
+    font-size: 0.75em;
+}
+
+.link-ws-fields {
+    margin-top: 8px;
+    margin-bottom: 6px;
+}
+
+.link-bridge-guide {
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--acid-panel-border);
+}
+
+.link-bridge-intro {
+    margin-bottom: 8px;
+}
+
+.link-bridge-doc-link {
+    display: inline-block;
+    margin-bottom: 10px;
+    font-family: monospace;
+    font-size: 0.78em;
+    color: #aaccee;
+    text-decoration: underline;
+}
+
+.link-bridge-doc-link:hover {
+    color: #cceeff;
+}
+
+.link-bridge-steps-title {
+    font-size: 0.72em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #999;
+    margin-bottom: 6px;
+}
+
+.link-bridge-steps {
+    margin: 0 0 10px 1.1em;
+    padding: 0;
+    font-family: monospace;
+    font-size: 0.72em;
+    line-height: 1.45;
+    color: #bbb;
+}
+
+.link-bridge-steps li {
+    margin-bottom: 5px;
+}
+
+.link-bridge-cmd-label {
+    font-family: monospace;
+    font-size: 0.72em;
+    color: #888;
+    margin-bottom: 4px;
+}
+
+.link-bridge-cmd {
+    margin: 0 0 4px;
+    padding: 8px 10px;
+    background: #0d0d12;
+    border: 1px solid #333;
+    font-family: monospace;
+    font-size: 0.72em;
+    line-height: 1.35;
+    color: #ccc;
+    overflow-x: auto;
 }
 
 p {
@@ -148,7 +606,7 @@ button.waiting {
 }
 
 .parameter-controlled {
-    background-color: #222266;
+    background-color: var(--acid-pattern-bg);
 }
 
 

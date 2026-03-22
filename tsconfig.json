@@ -5,7 +5,8 @@
     "lib": ["dom", "esnext"],
     "sourceMap": true,
     "outDir": "./js",
-    "strict": true
+    "strict": true,
+    "skipLibCheck": true
   },
   "compileOnSave": true,
   "include": [

@@ -1,0 +1,12 @@
+{
+  "name": "acid-banger-link-bridge",
+  "private": true,
+  "description": "Ableton Link to WebSocket bridge for acid-banger (native addon)",
+  "scripts": {
+    "start": "node link-server.cjs"
+  },
+  "dependencies": {
+    "abletonlink": "^0.2.0-beta.0",
+    "ws": "^8.18.0"
+  }
+}

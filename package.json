@@ -1,0 +1,17 @@
+{
+  "name": "acid-banger",
+  "private": true,
+  "description": "Algorithmic acid jam in the browser (fork)",
+  "scripts": {
+    "build": "tsc -p . && webpack --config webpack.config.cjs",
+    "watch": "tsc -p . --watch",
+    "webpack:watch": "webpack --config webpack.config.cjs --mode development --watch",
+    "dev": "npm run build && npx --yes serve dist -p 5173"
+  },
+  "devDependencies": {
+    "copy-webpack-plugin": "^12.0.2",
+    "typescript": "~5.6.3",
+    "webpack": "^5.96.1",
+    "webpack-cli": "^5.1.4"
+  }
+}

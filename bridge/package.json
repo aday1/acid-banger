@@ -1,0 +1,13 @@
+{
+  "name": "acid-banger-osc-bridge",
+  "private": true,
+  "type": "module",
+  "description": "UDP OSC to WebSocket bridge for acid-banger",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "osc": "^2.4.5",
+    "ws": "^8.18.0"
+  }
+}

@@ -6,7 +6,6 @@
 <head>
     <meta charset="UTF-8">
     <title>The Endless Acid Banger</title>
-    <script type="module" src="js/app.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta property="og:title" content="vitling: The Endless Acid Banger" />
     <meta property="og:type" content="music.song" />
@@ -17,12 +16,15 @@
     <link rel="stylesheet" href="ui.css">
 </head>
 <body>
+<div id="acidPageIntro">
 <h2>The Endless Acid Banger</h2>
+<details class="intro-details">
+    <summary>About this toy</summary>
 <p>
     The music you hear is generated in your browser by a randomised algorithm, below you can see the notes and parameters that are currently in use.
     You can also interact with various parameters and buttons manually.
     The green autopilot switches change how automatic playback is. Leave them on for a lean-back experience.
-    Buttons labelled ⟳ will generate new patterns.
+    Buttons labelled with a circular arrow will generate new patterns.
 </p>
 <p>
     The Endless Acid Banger was created by <a href="https://www.vitling.xyz">Vitling</a>.
@@ -30,5 +32,12 @@
     <a href="https://music.vitling.xyz/album/long-walks-and-tough-talks">buying</a> <a href="https://edgenetwork.bandcamp.com/album/edge001-spaceport-lounge-music">my</a> <a href="https://midnight-people.bandcamp.com/album/destiny-ep">music</a> or
     <a href="https://github.com/sponsors/vitling">sponsoring my GitHub</a>.
 </p>
+<p>
+    This interactive build is a <a href="https://github.com/aday1/acid-banger">fork by aday</a>
+    (MIDI sync and learn, OSC bridge wiring, Ableton Link helpers, and related UI). The original idea, sound, and license credit remain with Vitling; this fork is shared under the same <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> spirit.
+</p>
+</details>
+</div>
+<script type="module" src="js/app.js"></script>
 </body>
 </html>

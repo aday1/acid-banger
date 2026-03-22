@@ -64,10 +64,25 @@ export type DelayUnit = {
 }
 
 
+export type SyncMode =
+    | "internal"
+    | "midi-master"
+    | "midi-slave"
+    | "ableton-link";
+
 export type ClockUnit = {
-    currentStep: NumericParameter,
-    bpm: NumericParameter
-}
+    currentStep: NumericParameter;
+    bpm: NumericParameter;
+    syncMode: GeneralisedParameter<SyncMode>;
+    midiInputId: GeneralisedParameter<string>;
+    midiOutputId: GeneralisedParameter<string>;
+    midiStatusText: GeneralisedParameter<string>;
+    midiDeviceEpoch: GeneralisedParameter<number>;
+    linkWsHost: GeneralisedParameter<string>;
+    linkWsPort: GeneralisedParameter<string>;
+    rebuildTransport(): void;
+    disposeTransport(): void;
+};
 
 export type AutoPilotUnit = {
     switches: GeneralisedParameter<boolean>[]
@@ -102,11 +117,29 @@ export function parameter(name: string, bounds: [number, number], value: number)
     return Object.assign(genericParameter<number>(name, value), {bounds});
 }
 
+export type TransportStepHandler = (time: number, globalStep: number) => void;
+
 export type ProgramState = {
-    notes: ThreeOhMachine[],
-    drums: NineOhMachine,
-    gen: NoteGenerator,
-    delay: DelayUnit
-    clock: ClockUnit,
-    masterVolume: NumericParameter
-}
+    notes: ThreeOhMachine[];
+    drums: NineOhMachine;
+    gen: NoteGenerator;
+    delay: DelayUnit;
+    clock: ClockUnit;
+    masterVolume: NumericParameter;
+    osc: {
+        enabled: GeneralisedParameter<boolean>;
+        wsHost: GeneralisedParameter<string>;
+        wsPort: GeneralisedParameter<string>;
+        bridgeUdpListenPort: GeneralisedParameter<string>;
+        outHost: GeneralisedParameter<string>;
+        outPort: GeneralisedParameter<string>;
+        emitStepOsc: GeneralisedParameter<boolean>;
+        emitBpmOsc: GeneralisedParameter<boolean>;
+        lastIncomingOsc: GeneralisedParameter<string>;
+        status: GeneralisedParameter<string>;
+    };
+    midiLearn: {
+        statusLine: GeneralisedParameter<string>;
+        listEpoch: GeneralisedParameter<number>;
+    };
+};
