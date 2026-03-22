@@ -16,7 +16,7 @@ function syncModeRoleLabel(mode) {
         case "midi-slave":
             return "MIDI slave";
         case "ableton-link":
-            return "Ableton Link";
+            return "Ableton Link (follow session)";
         default:
             return String(mode);
     }
@@ -99,9 +99,21 @@ function createBpmTempoHeader(clock) {
         }
         stepFlashReady = true;
     });
+    function syncTapForClockMode() {
+        const link = clock.syncMode.value === "ableton-link";
+        tapBtn.disabled = link;
+        tapBtn.title = link
+            ? "Disabled while on Ableton Link: BPM and grid come from the Link session (e.g. change tempo in Live). You are not the tempo master here."
+            : "Tap tempo in time with the music. Beat 1-4 shows your place in the bar; BPM updates from your tap spacing (after two or more taps).";
+    }
+    clock.syncMode.subscribe(syncTapForClockMode);
+    syncTapForClockMode();
     const TAP_GAP_MS = 2200;
     let tapTimes = [];
     tapBtn.addEventListener("click", () => {
+        if (clock.syncMode.value === "ableton-link") {
+            return;
+        }
         const now = performance.now();
         tapTimes = tapTimes.filter((t) => now - t < TAP_GAP_MS);
         tapTimes.push(now);

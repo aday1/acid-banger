@@ -94,6 +94,9 @@ to the bridge, which used to fight tempo).
 Protocol (server to browser, repeated ~50/s):
   {"type":"link","beat":...,"phase":0..1,"bpm":...,"quantum":4,"peers":n,"playing":bool,"wsClients":n}
 
+The browser maps the 16-step sequencer using floating "beat" modulo "quantum" (phase alone
+can be per-beat in the native addon and must not drive the full 16 steps).
+
 Browser to server:
   {"cmd":"setBpm","value":128}
   {"cmd":"setQuantum","value":4}

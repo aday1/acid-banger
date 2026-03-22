@@ -53,6 +53,24 @@ function createMidiMasterTransport(initialBpm, getOutput) {
         },
     };
 }
+/**
+ * Map Link timeline to acid-banger's 0..15 sixteenth-step index.
+ * Prefer floating `beat` + `quantum`: phase within one quantum, then *4 for sixteenths.
+ * (Using raw `phase` * (quantum*4) is wrong if the native addon exposes phase per beat, which
+ * makes the sequencer run several times too fast.)
+ */
+function linkPayloadToGridStep(data) {
+    const q = typeof data.quantum === "number" && data.quantum > 0 ? data.quantum : 4;
+    const bt = data.beat;
+    if (typeof bt === "number" && Number.isFinite(bt)) {
+        const mod = ((bt % q) + q) % q;
+        const sixteenthsInQuantum = mod * 4;
+        return Math.floor(sixteenthsInQuantum + 1e-9) % 16;
+    }
+    const ph = typeof data.phase === "number" ? data.phase : 0;
+    const sixteenthsInQuantum = q * 4;
+    return Math.floor(ph * sixteenthsInQuantum + 1e-9) % 16;
+}
 function createAbletonLinkTransport(bpm, getWsUrl, onStatus) {
     let handler = () => { };
     let socket = null;
@@ -89,8 +107,7 @@ function createAbletonLinkTransport(bpm, getWsUrl, onStatus) {
                 applyingLinkBpm = false;
             }
         }
-        const sixteenthsInQuantum = q * 4;
-        const gridStep = Math.floor(ph * sixteenthsInQuantum + 1e-9) % 16;
+        const gridStep = linkPayloadToGridStep(data);
         if (gridStep !== lastGridStep) {
             lastGridStep = gridStep;
             const wall = new Date().getTime();
@@ -100,8 +117,9 @@ function createAbletonLinkTransport(bpm, getWsUrl, onStatus) {
         const play = data.playing !== false;
         const wsN = typeof data.wsClients === "number" ? data.wsClients : 0;
         const beatStr = typeof data.beat === "number" ? data.beat.toFixed(2) : "?";
-        onStatus(`Link: ${rounded} BPM | Link peers ${peers} | beat ${beatStr} phase ${ph.toFixed(3)} | quantum ${q} | WS clients ${wsN}` +
-            (play ? "" : "\ntransport stopped (Link)"));
+        const stepStr = String(gridStep);
+        onStatus(`Link: FOLLOWING session (browser is not tempo master) | ${rounded} BPM from Link | step ${stepStr}/16 | Link peers ${peers} | beat ${beatStr} phase ${ph.toFixed(3)} | quantum ${q} | WS ${wsN}` +
+            (play ? "" : "\nLink transport stopped (audio may still run in Live)"));
     }
     function connect() {
         if (reconnectTimer !== null) {

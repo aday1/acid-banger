@@ -87,6 +87,26 @@ type LinkWsPayload = {
     wsClients?: number;
 };
 
+/**
+ * Map Link timeline to acid-banger's 0..15 sixteenth-step index.
+ * Prefer floating `beat` + `quantum`: phase within one quantum, then *4 for sixteenths.
+ * (Using raw `phase` * (quantum*4) is wrong if the native addon exposes phase per beat, which
+ * makes the sequencer run several times too fast.)
+ */
+function linkPayloadToGridStep(data: LinkWsPayload): number {
+    const q =
+        typeof data.quantum === "number" && data.quantum > 0 ? data.quantum : 4;
+    const bt = data.beat;
+    if (typeof bt === "number" && Number.isFinite(bt)) {
+        const mod = ((bt % q) + q) % q;
+        const sixteenthsInQuantum = mod * 4;
+        return Math.floor(sixteenthsInQuantum + 1e-9) % 16;
+    }
+    const ph = typeof data.phase === "number" ? data.phase : 0;
+    const sixteenthsInQuantum = q * 4;
+    return Math.floor(ph * sixteenthsInQuantum + 1e-9) % 16;
+}
+
 function createAbletonLinkTransport(
     bpm: NumericParameter,
     getWsUrl: () => string | null,
@@ -129,9 +149,7 @@ function createAbletonLinkTransport(
             }
         }
 
-        const sixteenthsInQuantum = q * 4;
-        const gridStep =
-            Math.floor(ph * sixteenthsInQuantum + 1e-9) % 16;
+        const gridStep = linkPayloadToGridStep(data);
         if (gridStep !== lastGridStep) {
             lastGridStep = gridStep;
             const wall = new Date().getTime();
@@ -144,9 +162,10 @@ function createAbletonLinkTransport(
             typeof data.wsClients === "number" ? data.wsClients : 0;
         const beatStr =
             typeof data.beat === "number" ? data.beat.toFixed(2) : "?";
+        const stepStr = String(gridStep);
         onStatus(
-            `Link: ${rounded} BPM | Link peers ${peers} | beat ${beatStr} phase ${ph.toFixed(3)} | quantum ${q} | WS clients ${wsN}` +
-                (play ? "" : "\ntransport stopped (Link)")
+            `Link: FOLLOWING session (browser is not tempo master) | ${rounded} BPM from Link | step ${stepStr}/16 | Link peers ${peers} | beat ${beatStr} phase ${ph.toFixed(3)} | quantum ${q} | WS ${wsN}` +
+                (play ? "" : "\nLink transport stopped (audio may still run in Live)")
         );
     }
 
