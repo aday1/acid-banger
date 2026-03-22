@@ -42,6 +42,14 @@ Setup:
   npm install
   npm start
 
+Windows: BridgeLauncherPanel.ps1 (no browser needed)
+------------------------------------------------------
+  From the repo root you can open a small Windows panel with buttons and
+  keyboard shortcuts (F9 = this Link bridge, F10 = OSC bridge):
+    powershell -ExecutionPolicy Bypass -File .\BridgeLauncherPanel.ps1
+  Launch-AcidBanger.ps1 opens it automatically unless you pass -NoBridgesPanel.
+  A desktop shortcut "Acid Banger Bridges.lnk" is created next to the main app shortcut.
+
 Start bridge from the browser (Windows, optional)
 -------------------------------------------------
   Browsers cannot run Node or the native Link addon by themselves. Optional:

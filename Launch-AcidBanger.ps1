@@ -2,9 +2,11 @@
 # Build The Endless Acid Banger, serve dist/, open in Google Chrome, optional desktop shortcut.
 # If the default port is taken by another app, this script picks a free port and serves there
 # so you do not get a broken page (missing CSS / wrong app).
+# By default also opens a small Windows panel (F9/F10) to start Link and OSC bridges — use -NoBridgesPanel to skip.
 param(
     [switch]$SkipBuild,
     [switch]$SkipShortcut,
+    [switch]$NoBridgesPanel,
     [int]$Port = 5173
 )
 
@@ -80,16 +82,29 @@ if (-not (Test-Path -LiteralPath (Join-Path $Root "node_modules"))) {
 
 if (-not $SkipShortcut) {
     $desk = [Environment]::GetFolderPath("Desktop")
-    $lnkPath = Join-Path $desk "Endless Acid Banger.lnk"
-    $self = Join-Path $Root "Launch-AcidBanger.ps1"
     $wsh = New-Object -ComObject WScript.Shell
+
+    $self = Join-Path $Root "Launch-AcidBanger.ps1"
+    $lnkPath = Join-Path $desk "Endless Acid Banger.lnk"
     $sc = $wsh.CreateShortcut($lnkPath)
     $sc.TargetPath = "powershell.exe"
     $sc.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$self`""
     $sc.WorkingDirectory = $Root
-    $sc.Description = "Build and open The Endless Acid Banger (Chrome + local server)"
+    $sc.Description = "Build and open The Endless Acid Banger (Chrome + local server + bridge panel)"
     $sc.Save()
     Write-Host "Desktop shortcut: $lnkPath"
+
+    $bridgePanel = Join-Path $Root "BridgeLauncherPanel.ps1"
+    if (Test-Path -LiteralPath $bridgePanel) {
+        $lnkBridges = Join-Path $desk "Acid Banger Bridges.lnk"
+        $sc2 = $wsh.CreateShortcut($lnkBridges)
+        $sc2.TargetPath = "powershell.exe"
+        $sc2.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$bridgePanel`""
+        $sc2.WorkingDirectory = $Root
+        $sc2.Description = "Start Ableton Link or OSC bridge (same as F9/F10 in launcher panel)"
+        $sc2.Save()
+        Write-Host "Desktop shortcut: $lnkBridges"
+    }
 }
 
 if (-not $SkipBuild) {
@@ -158,3 +173,18 @@ if ($chrome) {
 
 Write-Host "Done. URL: $baseUrl"
 Write-Host "Close the minimized cmd window running 'serve' when finished."
+
+$bridgePanelScript = Join-Path $Root "BridgeLauncherPanel.ps1"
+if (-not $NoBridgesPanel -and (Test-Path -LiteralPath $bridgePanelScript)) {
+    Write-Host "Opening bridge launcher panel (F9 Link / F10 OSC). Use -NoBridgesPanel to skip next time."
+    Start-Process -FilePath (Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe") `
+        -ArgumentList @(
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-WindowStyle", "Normal",
+        "-File", $bridgePanelScript
+    ) -WorkingDirectory $Root
+}
+elseif (-not (Test-Path -LiteralPath $bridgePanelScript)) {
+    Write-Warning "BridgeLauncherPanel.ps1 not found; skipping bridge panel."
+}

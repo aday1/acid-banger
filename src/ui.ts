@@ -1115,7 +1115,7 @@ function SyncAndMidiPanel(clock: ClockUnit) {
     const protoHint = document.createElement("div");
     protoHint.classList.add("sync-hint", "link-bridge-protocol-hint");
     protoHint.innerText =
-        "The page cannot run Node by itself. On Windows you can register a one-time URL handler, then use the link below to launch Start-LinkBridge.ps1 from the browser.";
+        "The page cannot run Node by itself. On Windows use BridgeLauncherPanel.ps1 or Launch-AcidBanger.ps1 (opens a small window with buttons and F9/F10), or register the URL handler and use the link below.";
 
     const protoLink = document.createElement("a");
     protoLink.classList.add("link-bridge-doc-link");
@@ -1295,7 +1295,7 @@ function OscPanel(state: ProgramState) {
     const oscProtoHint = document.createElement("div");
     oscProtoHint.classList.add("sync-hint", "osc-bridge-protocol-hint");
     oscProtoHint.innerText =
-        "The page cannot start Node by itself. On Windows, run Register-AcidOscBridgeProtocol.ps1 once from the repo root, then:";
+        "The page cannot start Node by itself. On Windows use BridgeLauncherPanel.ps1 (F10) or Launch-AcidBanger.ps1, or run Register-AcidOscBridgeProtocol.ps1 once, then:";
     const oscProtoLink = document.createElement("a");
     oscProtoLink.classList.add("osc-bridge-readme-link");
     oscProtoLink.href = "acid-banger-oscbridge://start";

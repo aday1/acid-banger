@@ -23,7 +23,7 @@ Vitling has described the original as an art project rather than a conventional 
 | **Clock** | **Internal** (original-style clock), **MIDI master** / **slave**, **Ableton Link** via local Node **`link-bridge`** + WebSocket; in-app Link guide and `link-bridge-README.txt` in `dist/` after build. |
 | **MIDI** | Device pickers, acid lines mirrored to MIDI out **channels 1–2**, **MIDI learn/forget** (right-click controls, CC/note, `localStorage` key `acid-banger-midi-map-v1`). |
 | **OSC** | Browser client plus **`bridge/`** Node relay (UDP ↔ WebSocket); panel text for TouchOSC-style UDP vs WebSocket; `bridge-README.txt` in `dist/` after build. |
-| **Windows** | **`Launch-AcidBanger.ps1`** (build, serve, Chrome, desktop shortcut). **`link-bridge/Start-LinkBridge.ps1`** for the Link bridge. |
+| **Windows** | **`Launch-AcidBanger.ps1`** (build, serve, Chrome, optional **bridge panel** with F9/F10, two desktop shortcuts). **`BridgeLauncherPanel.ps1`** alone for Link/OSC buttons. **`link-bridge/Start-LinkBridge.ps1`** for the Link bridge. |
 | **UI** | Sync / MIDI / OSC panels, fork credit in `index.html`, CSS theme variables. |
 
 The core musical behaviour, layout, and WebAudio patch still trace to Vitling’s upstream work; the fork layers transport and integration around that core.
@@ -38,7 +38,7 @@ The core musical behaviour, layout, and WebAudio patch still trace to Vitling’
 4. Serve **`dist/`** over HTTP. Web MIDI needs **`https://`** or **`localhost`**.
 5. **Develop:** `npm run watch`, or rebuild and use **`npm run dev`** (static server; port may differ if 5173 is in use).
 
-On Windows, **`Launch-AcidBanger.ps1`** from the repo root can build, serve, open Chrome, and refresh the **Endless Acid Banger** desktop shortcut (omit **`-SkipShortcut`** only when a shortcut is not wanted).
+On Windows, **`Launch-AcidBanger.ps1`** from the repo root can build, serve, open Chrome, and refresh desktop shortcuts (**Endless Acid Banger** + **Acid Banger Bridges**). It also opens a small **bridge launcher** window (F9 = Link bridge, F10 = OSC); pass **`-NoBridgesPanel`** if you do not want that window.
 
 ---
 
