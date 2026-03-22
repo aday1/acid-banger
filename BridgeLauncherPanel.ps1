@@ -132,7 +132,7 @@ function Invoke-RegisterScript {
 
 try {
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Acid Banger — bridges"
+    $form.Text = "Acid Banger - bridges"
     $form.Size = New-Object System.Drawing.Size(440, 360)
     $form.MinimumSize = New-Object System.Drawing.Size(400, 320)
     $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
@@ -151,7 +151,7 @@ try {
     $hint.Size = New-Object System.Drawing.Size(400, 36)
     $hint.Font = New-Object System.Drawing.Font("Segoe UI", 8.5)
     $hint.ForeColor = [System.Drawing.Color]::FromArgb(80, 80, 90)
-    $hint.Text = "Focus this window, then F9 or F10. Each opens a new PowerShell window — leave it open while you use the app."
+    $hint.Text = "Focus this window, then F9 or F10. Each opens a new PowerShell window - leave it open while you use the app."
 
     $btnLink = New-Object System.Windows.Forms.Button
     $btnLink.Location = New-Object System.Drawing.Point(14, 92)
