@@ -709,20 +709,39 @@ function OscPanel(state) {
     readmeLink.innerText =
         "Open bridge/README.txt (install server.mjs, UDP port, WebSocket)";
     readmeRow.append(readmeLink);
+    const plainHelp = document.createElement("div");
+    plainHelp.classList.add("osc-plain-help");
+    const helpTitle = document.createElement("div");
+    helpTitle.classList.add("osc-plain-help-title");
+    helpTitle.innerText = "What is WebSocket vs UDP? (TouchOSC, etc.)";
+    const p1 = document.createElement("div");
+    p1.classList.add("sync-hint", "osc-plain-p");
+    p1.innerText =
+        "Browsers cannot speak OSC over UDP. The Node program bridge/server.mjs runs on your computer and relays messages. The status line that says connected to Node at 127.0.0.1 port 8765 is only the link from this tab to that program. ws:// just means WebSocket on your machine; you do not type that into TouchOSC.";
+    const p2 = document.createElement("div");
+    p2.classList.add("sync-hint", "osc-plain-p");
+    p2.innerText =
+        "TouchOSC, Lemur, Max, SuperCollider, etc. send OSC as UDP. Point them at the computer running the bridge: use the Bridge OSC UDP listen port (often 57121), not the WS port. On a phone, use your PC's Wi-Fi IP as host and 57121 as port (same firewall rules as any OSC app).";
+    const p3 = document.createElement("div");
+    p3.classList.add("sync-hint", "osc-plain-p");
+    p3.innerText =
+        "Quick example: bridge running with defaults, OSC enabled here with host 127.0.0.1 and WS port 8765. TouchOSC on the same PC: Host 127.0.0.1, Port 57121. TouchOSC on a phone: Host = your PC's LAN address (e.g. 192.168.1.x), Port 57121.";
+    plainHelp.append(helpTitle, p1, p2, p3);
     const wsHead = document.createElement("div");
     wsHead.classList.add("osc-section-label");
-    wsHead.innerText = "Bridge WebSocket (browser to Node)";
+    wsHead.innerText = "Browser to Node (WebSocket)";
     const wsGrid = document.createElement("div");
     wsGrid.classList.add("osc-host-port-grid");
     const wsHostRow = document.createElement("div");
     wsHostRow.classList.add("osc-hp-cell");
     const wl = document.createElement("span");
-    wl.innerText = "Host or full URL";
+    wl.innerText = "Bridge machine (host)";
     const wh = document.createElement("input");
     wh.type = "text";
     wh.classList.add("osc-field-input", "osc-field-input-wide");
     wh.spellcheck = false;
-    wh.title = "e.g. 127.0.0.1 or ws://127.0.0.1:8765";
+    wh.title =
+        "Usually 127.0.0.1 if the bridge runs on this PC. Advanced: full ws://127.0.0.1:8765 in this field instead of host+port.";
     state.osc.wsHost.subscribe((v) => {
         if (wh.value !== v)
             wh.value = v;
@@ -734,7 +753,7 @@ function OscPanel(state) {
     const wsPortRow = document.createElement("div");
     wsPortRow.classList.add("osc-hp-cell");
     const wpl = document.createElement("span");
-    wpl.innerText = "WS port";
+    wpl.innerText = "WebSocket port (match OSC_WS_PORT)";
     const wp = document.createElement("input");
     wp.type = "text";
     wp.classList.add("osc-field-input", "osc-port-input");
@@ -748,10 +767,10 @@ function OscPanel(state) {
     });
     wsPortRow.append(wpl, wp);
     wsGrid.append(wsHostRow, wsPortRow);
-    const udpRef = oscTextField("Bridge OSC UDP listen port (match OSC_UDP_PORT when starting bridge)", state.osc.bridgeUdpListenPort);
+    const udpRef = oscTextField("UDP port for TouchOSC and other OSC apps (match OSC_UDP_PORT, often 57121)", state.osc.bridgeUdpListenPort);
     const inHead = document.createElement("div");
     inHead.classList.add("osc-section-label");
-    inHead.innerText = "OSC in (last message from bridge)";
+    inHead.innerText = "OSC in (last message forwarded from UDP)";
     const lastIn = document.createElement("div");
     lastIn.classList.add("osc-last-in");
     state.osc.lastIncomingOsc.subscribe((t) => {
@@ -809,8 +828,8 @@ function OscPanel(state) {
     const hint = document.createElement("div");
     hint.classList.add("sync-hint");
     hint.innerText =
-        "Run bridge/server.mjs from the repo (see README link above). Incoming OSC hits UDP on the listen port; the bridge forwards JSON to the browser. Outgoing uses the same WebSocket to ask the bridge to send UDP to your target host:port.";
-    body.append(en, readmeRow, wsHead, wsGrid, udpRef, inHead, lastIn, outHead, outGrid, emitRow, emitNote, st, hint);
+        "Run bridge/server.mjs (README link above). UDP goes in/out on the listen and target ports; the WebSocket fields are only for this page talking to Node.";
+    body.append(en, readmeRow, plainHelp, wsHead, wsGrid, udpRef, inHead, lastIn, outHead, outGrid, emitRow, emitNote, st, hint);
     box.append(title, body);
     return box;
 }

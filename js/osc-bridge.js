@@ -3,6 +3,16 @@
   This work is licensed under a Creative Commons Attribution 4.0 International License
   https://creativecommons.org/licenses/by/4.0/
 */
+/** User-facing: "127.0.0.1 port 8765" instead of ws:// jargon */
+function describeBridgeSocket(url) {
+    const m = url.match(/^wss?:\/\/([^/:]+)(?::(\d+))?/i);
+    if (m) {
+        const host = m[1];
+        const port = m[2];
+        return port ? `${host} port ${port}` : host;
+    }
+    return url;
+}
 function buildWsUrl(state) {
     const h = state.osc.wsHost.value.trim();
     const p = state.osc.wsPort.value.trim();
@@ -81,10 +91,11 @@ export function attachOscBridgeClient(state, bpm) {
         const url = buildWsUrl(state);
         if (!url) {
             osc.status.value =
-                "OSC bridge: set WebSocket host and numeric port (or full ws:// URL in host)";
+                "OSC bridge: set host (e.g. 127.0.0.1) and WS port (e.g. 8765) to match bridge/server.mjs";
             return;
         }
-        osc.status.value = "OSC bridge: connecting to " + url + " …";
+        osc.status.value =
+            "OSC bridge: connecting to Node at " + describeBridgeSocket(url) + " …";
         try {
             socket = new WebSocket(url);
         }
@@ -93,7 +104,10 @@ export function attachOscBridgeClient(state, bpm) {
             return;
         }
         socket.onopen = () => {
-            osc.status.value = "OSC bridge: connected (" + url + ")";
+            osc.status.value =
+                "OSC bridge: connected to Node at " +
+                    describeBridgeSocket(url) +
+                    ". TouchOSC and other OSC apps use UDP to the listen port below, not this connection.";
         };
         socket.onclose = () => {
             osc.status.value = "OSC bridge: disconnected";
@@ -102,7 +116,8 @@ export function attachOscBridgeClient(state, bpm) {
             }
         };
         socket.onerror = () => {
-            osc.status.value = "OSC bridge: WebSocket error";
+            osc.status.value =
+                "OSC bridge: could not reach Node (wrong host/port, or bridge not running)";
         };
         socket.onmessage = (ev) => {
             if (typeof ev.data === "string") {

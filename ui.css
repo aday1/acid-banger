@@ -310,6 +310,30 @@ body {
     cursor: pointer;
 }
 
+.osc-plain-help {
+    margin: 10px 0 12px;
+    padding: 10px 12px;
+    border: 1px solid #333;
+    background: #0a0a0f;
+}
+
+.osc-plain-help-title {
+    font-size: 0.8em;
+    letter-spacing: 0.04em;
+    color: var(--acid-text);
+    margin-bottom: 8px;
+}
+
+.osc-plain-p {
+    margin: 0 0 8px;
+    line-height: 1.45;
+    font-size: 0.78em;
+}
+
+.osc-plain-p:last-child {
+    margin-bottom: 0;
+}
+
 .osc-bridge-readme-row {
     margin-bottom: 8px;
 }

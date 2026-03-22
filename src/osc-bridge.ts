@@ -18,6 +18,17 @@ export type OscBridgeApi = {
     isConnected: () => boolean;
 };
 
+/** User-facing: "127.0.0.1 port 8765" instead of ws:// jargon */
+function describeBridgeSocket(url: string): string {
+    const m = url.match(/^wss?:\/\/([^/:]+)(?::(\d+))?/i);
+    if (m) {
+        const host = m[1];
+        const port = m[2];
+        return port ? `${host} port ${port}` : host;
+    }
+    return url;
+}
+
 function buildWsUrl(state: ProgramState): string | null {
     const h = state.osc.wsHost.value.trim();
     const p = state.osc.wsPort.value.trim();
@@ -102,10 +113,11 @@ export function attachOscBridgeClient(
         const url = buildWsUrl(state);
         if (!url) {
             osc.status.value =
-                "OSC bridge: set WebSocket host and numeric port (or full ws:// URL in host)";
+                "OSC bridge: set host (e.g. 127.0.0.1) and WS port (e.g. 8765) to match bridge/server.mjs";
             return;
         }
-        osc.status.value = "OSC bridge: connecting to " + url + " …";
+        osc.status.value =
+            "OSC bridge: connecting to Node at " + describeBridgeSocket(url) + " …";
         try {
             socket = new WebSocket(url);
         } catch (e) {
@@ -113,7 +125,10 @@ export function attachOscBridgeClient(
             return;
         }
         socket.onopen = () => {
-            osc.status.value = "OSC bridge: connected (" + url + ")";
+            osc.status.value =
+                "OSC bridge: connected to Node at " +
+                describeBridgeSocket(url) +
+                ". TouchOSC and other OSC apps use UDP to the listen port below, not this connection.";
         };
         socket.onclose = () => {
             osc.status.value = "OSC bridge: disconnected";
@@ -122,7 +137,8 @@ export function attachOscBridgeClient(
             }
         };
         socket.onerror = () => {
-            osc.status.value = "OSC bridge: WebSocket error";
+            osc.status.value =
+                "OSC bridge: could not reach Node (wrong host/port, or bridge not running)";
         };
         socket.onmessage = (ev) => {
             if (typeof ev.data === "string") {
