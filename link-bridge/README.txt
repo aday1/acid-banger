@@ -7,14 +7,28 @@ timing to the page over WebSocket.
 
 Windows (if npm install fails with node-gyp / Python errors)
 ------------------------------------------------------------
+  If the log shows many lines like "python.exe could not be run" with paths under
+  Program Files or AppData: those are often stale Windows registrations from an old
+  Python uninstall. node-gyp tries each path and none execute. Fix by installing a
+  current Python 3 from https://www.python.org/downloads/ with "Add python.exe to PATH",
+  then close every terminal, open a new one, and run:  python --version
+  You can also point npm at one exe explicitly:
+    npm config set python "C:\Users\YOU\AppData\Local\Programs\Python\Python312\python.exe"
+
+  If you see EPERM / rmdir errors under node_modules\abletonlink: another process
+  (editor, antivirus) may be locking files. Close extra terminals, then from link-bridge:
+    powershell -ExecutionPolicy Bypass -File .\Start-LinkBridge.ps1 -Clean
+  That removes node_modules in this folder and reinstalls.
+
   1. Install Python 3 from https://www.python.org/downloads/
      Use the installer option to add Python to PATH. Close and reopen the terminal.
   2. Install "Build Tools for Visual Studio" with workload
      "Desktop development with C++" (MSVC, Windows SDK).
      https://visualstudio.microsoft.com/visual-cpp-build-tools/
-  3. Prefer Node.js 20 or 22 LTS if builds fail on a bleeding-edge Node version.
+  3. Prefer Node.js 20 or 22 LTS if builds fail on a bleeding-edge Node version (e.g. Node 24+).
   4. From this folder run:  powershell -ExecutionPolicy Bypass -File .\Start-LinkBridge.ps1
      Or manually:  npm install   then   npm start
+     Flags:  -Clean  wipe node_modules first;  -IgnorePythonCheck  skip preflight (rare)
 
 Requirements (same as node-gyp native addons):
   - Python 3.x on PATH (node-gyp)
@@ -27,7 +41,9 @@ Setup:
 
 PowerShell helper (install + start):
   powershell -ExecutionPolicy Bypass -File .\Start-LinkBridge.ps1
-  Skip reinstall:  .\Start-LinkBridge.ps1 -SkipInstall
+  Skip reinstall:       .\Start-LinkBridge.ps1 -SkipInstall
+  Wipe node_modules:    .\Start-LinkBridge.ps1 -Clean
+  Skip Python preflight: .\Start-LinkBridge.ps1 -IgnorePythonCheck
 
 Environment:
   LINK_WS_PORT   WebSocket port (default 9999). Match "Link WS port" in the app.
