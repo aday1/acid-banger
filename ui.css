@@ -7,22 +7,26 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron&display=swap');
 
 :root {
-    --acid-page-bg: #111;
+    --acid-page-bg: #09090c;
     --acid-pattern-bg: #222266;
-    --acid-note: #88aacc;
-    --acid-accent: #AA88CC;
-    --acid-glide: #CCAA88;
-    --acid-text: #CCCCFF;
+    --acid-note: #80c1ff;
+    --acid-accent: #b57cff;
+    --acid-glide: #ffae6a;
+    --acid-text: #d4dcf4;
     --acid-highlight: rgba(255,255,255,0.2);
     --acid-grid: rgba(255,255,255,0.2);
     --acid-dial: #AA88CC;
-    --acid-panel-border: #444444;
+    --acid-panel-border: #3a3542;
 }
 
 body {
-    background-color: var(--acid-page-bg);
+    background:
+        radial-gradient(circle at 10% 12%, rgba(80, 36, 22, 0.32), transparent 38%),
+        radial-gradient(circle at 84% 18%, rgba(45, 24, 64, 0.36), transparent 42%),
+        linear-gradient(180deg, #15121a 0%, var(--acid-page-bg) 45%, #060609 100%);
     color:white;
     font-family: Orbitron, monospace;
+    letter-spacing: 0.02em;
 }
 
 #ui {
@@ -402,6 +406,14 @@ body {
     background: rgba(170, 136, 204, 0.25);
 }
 
+.midi-ctx-current {
+    padding: 8px 14px;
+    border-bottom: 1px solid #2b2b36;
+    font-family: monospace;
+    font-size: 0.75em;
+    color: #9ec9ff;
+}
+
 .midi-map-scroll {
     max-height: 180px;
     overflow-y: auto;
@@ -561,6 +573,115 @@ body {
     padding: 6px;
     min-height: 2.2em;
     word-break: break-all;
+}
+
+.osc-debug-row {
+    margin-top: 6px;
+    margin-bottom: 4px;
+}
+
+.osc-debug-clear {
+    font-family: monospace;
+    font-size: 0.72em;
+    padding: 3px 8px;
+    cursor: pointer;
+}
+
+.osc-debug-log {
+    font-family: monospace;
+    font-size: 0.75em;
+    color: #c9d8f2;
+    background: #0d0f14;
+    border: 1px solid var(--acid-panel-border);
+    padding: 6px;
+    min-height: 6.5em;
+    max-height: 14em;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.viz303-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.viz303-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.viz303-rec-btn {
+    font-family: monospace;
+    font-size: 0.75em;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+.viz303-rec-status {
+    font-family: monospace;
+    font-size: 0.72em;
+    color: #a9bedf;
+}
+
+.viz303-orbit-speed {
+    width: 120px;
+}
+
+.viz303-cam-mode {
+    font-family: monospace;
+    font-size: 0.74em;
+    background: #0d1018;
+    color: #cfd9ea;
+    border: 1px solid #384254;
+    padding: 3px 6px;
+}
+
+.viz303-mixer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    align-items: center;
+    padding: 4px 2px 2px;
+}
+
+.viz303-mixer-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: monospace;
+    font-size: 0.72em;
+    color: #bed1ee;
+}
+
+.viz303-mixer-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 85px;
+}
+
+.viz303-mixer-slider {
+    width: 88px;
+}
+
+.viz303-canvas-wrap {
+    width: 100%;
+    min-height: 250px;
+    height: 280px;
+    border: 1px solid var(--acid-panel-border);
+    background: radial-gradient(circle at 50% 24%, #17121f 0%, #0a0b10 64%, #050507 100%);
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6), 0 0 22px rgba(167, 101, 255, 0.12);
+    overflow: hidden;
+}
+
+.viz303-canvas-wrap canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
 }
 
 .osc-emit-row {
@@ -755,10 +876,54 @@ button:hover {
     flex-grow: 1;
 }
 
-.meter canvas {
+.meter canvas,
+.acid-meter-canvas {
     object-fit: fill;
-    height: 100px;
-    width:100px;
+    height: 112px;
+    width: 100%;
+    border: 1px solid #3a2d25;
+    background: #090a0f;
+    box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.8), 0 0 16px rgba(255, 124, 72, 0.18);
+}
+
+.acid-meter-split-canvas {
+    object-fit: fill;
+    width: 100%;
+    height: 120px;
+    border: 1px solid #2f3340;
+    background: #07080d;
+    box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.76), 0 0 10px rgba(126, 178, 255, 0.12);
+}
+
+.acid-meter-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.acid-meter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.acid-meter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: monospace;
+    font-size: 0.7em;
+    color: #b6c6df;
+}
+
+.acid-meter-align {
+    font-family: monospace;
+    font-size: 0.72em;
+    background: #11131a;
+    color: #dbe6f9;
+    border: 1px solid #3a4558;
+    padding: 3px 6px;
 }
 
 

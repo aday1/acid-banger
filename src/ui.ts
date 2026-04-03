@@ -23,6 +23,7 @@ import { textNoteToNumber } from "./audio.js";
 import { Dial } from "./dial.js";
 import { VerticalFader } from "./fader.js";
 import { midiPortMapHasId } from "./midi-helpers.js";
+import { Acid303Visual } from "./viz-303.js";
 
 export type MidiUiCallbacks = {
     startMidiLearnForTarget(id: string): void;
@@ -34,6 +35,12 @@ export type MidiUiCallbacks = {
         targetId: string;
         label: string;
         binding: MidiBinding;
+    }[];
+    getMidiMappingForTarget(id: string): MidiBinding | null;
+    getMidiTargets(): {
+        id: string;
+        label: string;
+        kind: "numeric" | "bool" | "trigger";
     }[];
 };
 
@@ -237,6 +244,17 @@ function createMidiTargetContextMenu(cb: MidiUiCallbacks): MidiTargetMenu {
         bindGlobals();
         const box = document.createElement("div");
         box.className = "midi-ctx-menu";
+
+        function formatBinding(binding: MidiBinding | null): string {
+            if (!binding) return "Current mapping: none";
+            const kind = binding.kind.toUpperCase();
+            return `Current mapping: ${kind} ch${binding.channel + 1} #${binding.number}`;
+        }
+
+        const mappedNow = document.createElement("div");
+        mappedNow.className = "midi-ctx-current";
+        mappedNow.textContent = formatBinding(cb.getMidiMappingForTarget(targetId));
+        box.append(mappedNow);
 
         function addItem(text: string, action: () => void) {
             const b = document.createElement("button");
@@ -809,32 +827,240 @@ function AutopilotControls(
 }
 
 function AudioMeter(analyser: AnalyserNode) {
+    const wrap = document.createElement("div");
+    wrap.classList.add("acid-meter-wrap");
+    const controls = document.createElement("div");
+    controls.classList.add("acid-meter-controls");
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
-    let w = (canvas.width = 200);
-    const h = (canvas.height = 100);
+    canvas.classList.add("acid-meter-canvas");
+    let w = (canvas.width = 320);
+    const h = (canvas.height = 112);
     const g = canvas.getContext("2d") as CanvasRenderingContext2D;
+    const splitCanvas = document.createElement("canvas");
+    splitCanvas.style.width = "100%";
+    splitCanvas.classList.add("acid-meter-split-canvas");
+    let sw = (splitCanvas.width = 320);
+    const sh = (splitCanvas.height = 120);
+    const sg = splitCanvas.getContext("2d") as CanvasRenderingContext2D;
 
-    const output = new Uint8Array(analyser.fftSize);
+    const waveform = new Uint8Array(analyser.fftSize);
+    const fft = new Uint8Array(analyser.frequencyBinCount);
+    const splitFft = new Uint8Array(analyser.frequencyBinCount);
+    const bars = 64;
+    const peakHold = new Array<number>(bars).fill(0);
+    const grain = new Array<number>(24).fill(0).map((_, i) => Math.sin(i * 17.123));
+    let showBars = true;
+    let showWave = true;
+    let showPeaks = true;
+    let showGrid = true;
+    let showScan = true;
+    let showSplitBands = true;
+    let meterAlign: "left" | "center" | "right" = "center";
+
+    function setMeterAlign() {
+        if (meterAlign === "left") {
+            canvas.style.marginLeft = "0";
+            canvas.style.marginRight = "auto";
+            canvas.style.maxWidth = "92%";
+        } else if (meterAlign === "right") {
+            canvas.style.marginLeft = "auto";
+            canvas.style.marginRight = "0";
+            canvas.style.maxWidth = "92%";
+        } else {
+            canvas.style.marginLeft = "auto";
+            canvas.style.marginRight = "auto";
+            canvas.style.maxWidth = "100%";
+        }
+    }
+    setMeterAlign();
+
+    function meterToggle(labelText: string, onByDefault: boolean, onChange: (on: boolean) => void) {
+        const label = document.createElement("label");
+        label.classList.add("acid-meter-toggle");
+        const chk = document.createElement("input");
+        chk.type = "checkbox";
+        chk.checked = onByDefault;
+        chk.addEventListener("change", () => onChange(chk.checked));
+        const span = document.createElement("span");
+        span.textContent = labelText;
+        label.append(chk, span);
+        return label;
+    }
+
+    const alignSelect = document.createElement("select");
+    alignSelect.classList.add("acid-meter-align");
+    for (const [v, t] of [
+        ["left", "Align left"],
+        ["center", "Align center"],
+        ["right", "Align right"],
+    ] as const) {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = t;
+        alignSelect.append(opt);
+    }
+    alignSelect.value = meterAlign;
+    alignSelect.addEventListener("change", () => {
+        meterAlign = alignSelect.value as "left" | "center" | "right";
+        setMeterAlign();
+    });
+
+    controls.append(
+        meterToggle("Bars", true, (on) => (showBars = on)),
+        meterToggle("Wave", true, (on) => (showWave = on)),
+        meterToggle("Peaks", true, (on) => (showPeaks = on)),
+        meterToggle("Grid", true, (on) => (showGrid = on)),
+        meterToggle("Scan", true, (on) => (showScan = on)),
+        meterToggle("Split bands", true, (on) => {
+            showSplitBands = on;
+            splitCanvas.style.display = on ? "block" : "none";
+        }),
+        alignSelect
+    );
+    wrap.append(controls, canvas, splitCanvas);
 
     function draw() {
-        analyser.getByteTimeDomainData(output);
+        analyser.getByteTimeDomainData(waveform);
+        analyser.getByteFrequencyData(fft);
+        analyser.getByteFrequencyData(splitFft);
 
-        g.clearRect(0, 0, w, h);
-        g.strokeStyle = "white";
-        g.beginPath();
-        g.moveTo(0, h / 2);
-        for (let i = 0; i < output.length; i++) {
-            const v = output[i] / 128 - 1;
-            g.lineTo((w * i) / output.length, h / 2 + 1.5 * v * (h / 2));
+        if (canvas.clientWidth > 0 && canvas.clientWidth !== w) {
+            w = canvas.width = Math.max(180, Math.floor(canvas.clientWidth));
+        }
+        if (splitCanvas.clientWidth > 0 && splitCanvas.clientWidth !== sw) {
+            sw = splitCanvas.width = Math.max(180, Math.floor(splitCanvas.clientWidth));
         }
 
+        const t = performance.now() * 0.001;
+        const bgGrad = g.createLinearGradient(0, 0, 0, h);
+        bgGrad.addColorStop(0, "#1a120f");
+        bgGrad.addColorStop(0.45, "#0b0c12");
+        bgGrad.addColorStop(1, "#08090d");
+        g.fillStyle = bgGrad;
+        g.fillRect(0, 0, w, h);
+
+        if (showScan) {
+            for (let y = 0; y < h; y += 2) {
+                const noise = (Math.sin(y * 3.11 + t * 6.0) * 0.5 + 0.5) * 0.08;
+                g.fillStyle = `rgba(255,140,90,${0.03 + noise})`;
+                g.fillRect(0, y, w, 1);
+            }
+        }
+
+        if (showGrid) {
+            g.strokeStyle = "rgba(140,150,200,0.14)";
+            for (let x = 0; x <= w; x += 24) {
+                g.beginPath();
+                g.moveTo(x + 0.5, 0);
+                g.lineTo(x + 0.5, h);
+                g.stroke();
+            }
+            for (let y = 0; y <= h; y += 16) {
+                g.beginPath();
+                g.moveTo(0, y + 0.5);
+                g.lineTo(w, y + 0.5);
+                g.stroke();
+            }
+        }
+
+        if (showBars || showPeaks) {
+            g.globalCompositeOperation = "lighter";
+            const barW = w / bars;
+            for (let i = 0; i < bars; i++) {
+                const from = Math.floor((i / bars) * fft.length);
+                const to = Math.max(from + 1, Math.floor(((i + 1) / bars) * fft.length));
+                let sum = 0;
+                for (let k = from; k < to; k++) sum += fft[k];
+                const avg = sum / (to - from);
+                const value = Math.min(1, Math.max(0, avg / 255));
+                const boosted = Math.pow(value, 0.72);
+                peakHold[i] = Math.max(boosted, peakHold[i] * 0.94);
+
+                const x = i * barW;
+                const barH = boosted * (h * 0.82);
+                const peakY = h - peakHold[i] * (h * 0.82);
+                const hue = 20 + i * 1.4;
+                if (showBars) {
+                    g.fillStyle = `hsla(${hue},85%,${28 + boosted * 36}%,0.85)`;
+                    g.fillRect(x + 0.8, h - barH, Math.max(1, barW - 1.6), barH);
+                }
+                if (showPeaks) {
+                    g.fillStyle = `hsla(${hue + 30},95%,70%,0.92)`;
+                    g.fillRect(x + 0.6, peakY - 1, Math.max(1, barW - 1.2), 2);
+                }
+            }
+            g.globalCompositeOperation = "source-over";
+        }
+
+        if (showWave) {
+            g.strokeStyle = "rgba(185,225,255,0.95)";
+            g.shadowColor = "rgba(110,200,255,0.55)";
+            g.shadowBlur = 8;
+            g.beginPath();
+            g.moveTo(0, h / 2);
+            for (let i = 0; i < waveform.length; i++) {
+                const v = waveform[i] / 128 - 1;
+                const grit = grain[i % grain.length] * 0.01;
+                g.lineTo((w * i) / waveform.length, h / 2 + 1.35 * (v + grit) * (h / 2));
+            }
+            g.stroke();
+            g.shadowBlur = 0;
+        }
+
+        g.strokeStyle = "rgba(255,180,120,0.25)";
+        g.beginPath();
+        g.moveTo(0, h * 0.66);
+        g.lineTo(w, h * 0.66);
         g.stroke();
+
+        if (showSplitBands) {
+            const bandRows = [
+                { name: "LOW", from: 0.0, to: 0.12, col: "rgba(255,120,78,0.92)" },
+                { name: "MID", from: 0.12, to: 0.42, col: "rgba(125,214,255,0.9)" },
+                { name: "HIGH", from: 0.42, to: 1.0, col: "rgba(193,126,255,0.92)" },
+            ] as const;
+            const rowH = sh / bandRows.length;
+            sg.fillStyle = "#07080d";
+            sg.fillRect(0, 0, sw, sh);
+            for (let r = 0; r < bandRows.length; r++) {
+                const row = bandRows[r];
+                const y0 = r * rowH;
+                const yMid = y0 + rowH * 0.5;
+                const from = Math.floor(row.from * splitFft.length);
+                const to = Math.max(from + 1, Math.floor(row.to * splitFft.length));
+                const points = Math.min(160, to - from);
+                sg.strokeStyle = row.col;
+                sg.shadowColor = row.col.replace("0.9", "0.45").replace("0.92", "0.45");
+                sg.shadowBlur = 6;
+                sg.beginPath();
+                sg.moveTo(0, yMid);
+                for (let i = 0; i < points; i++) {
+                    const idx = from + Math.floor((i / Math.max(1, points - 1)) * (to - from - 1));
+                    const v = splitFft[idx] / 255;
+                    const amp = (rowH * 0.42) * Math.pow(v, 0.75);
+                    const px = (i / Math.max(1, points - 1)) * sw;
+                    const py = yMid - amp + Math.sin((i * 0.22) + t * 3.0) * (rowH * 0.03);
+                    sg.lineTo(px, py);
+                }
+                sg.stroke();
+                sg.shadowBlur = 0;
+                sg.fillStyle = "rgba(214,224,240,0.65)";
+                sg.font = "10px monospace";
+                sg.fillText(row.name, 8, y0 + 12);
+                sg.strokeStyle = "rgba(255,255,255,0.08)";
+                sg.beginPath();
+                sg.moveTo(0, y0 + rowH - 0.5);
+                sg.lineTo(sw, y0 + rowH - 0.5);
+                sg.stroke();
+            }
+        }
+
         window.requestAnimationFrame(draw);
     }
     window.requestAnimationFrame(draw);
 
-    return canvas;
+    return wrap;
 }
 
 function modeRadio(
@@ -901,6 +1127,147 @@ function formatMidiBinding(b: MidiBinding): string {
         return "Ch " + ch + " CC " + b.number;
     }
     return "Ch " + ch + " Note " + b.number;
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+    if (size <= 0) return [items];
+    const out: T[][] = [];
+    for (let i = 0; i < items.length; i += size) {
+        out.push(items.slice(i, i + size));
+    }
+    return out;
+}
+
+function triggerValuesForKind(kind: "numeric" | "bool" | "trigger") {
+    if (kind === "trigger") {
+        return { on: 127, off: 0 };
+    }
+    if (kind === "bool") {
+        return { on: 127, off: 0 };
+    }
+    return { on: 127, off: 0 };
+}
+
+function buildTouchOscBlueprint(state: ProgramState, midiCallbacks: MidiUiCallbacks) {
+    const ns = "/mmc";
+    const ccAddr = `${ns}/midi/cc`;
+    const noteAddr = `${ns}/midi/note`;
+    const udpListen = parseInt(state.osc.bridgeUdpListenPort.value.trim(), 10);
+    const udpPort = Number.isFinite(udpListen) ? udpListen : 57121;
+    const host =
+        state.osc.wsHost.value.trim() && !state.osc.wsHost.value.includes("://")
+            ? state.osc.wsHost.value.trim()
+            : "127.0.0.1";
+
+    const controls = midiCallbacks.getMidiTargets().map((target) => {
+        const binding = midiCallbacks.getMidiMappingForTarget(target.id);
+        const base = {
+            id: target.id,
+            label: target.label,
+            targetKind: target.kind,
+            mapped: binding
+                ? `${binding.kind.toUpperCase()} ch${binding.channel + 1} #${binding.number}`
+                : "none",
+        };
+        if (!binding) {
+            return {
+                ...base,
+                mode: "unmapped",
+                osc: null,
+            };
+        }
+
+        if (binding.kind === "cc") {
+            const trig = triggerValuesForKind(target.kind);
+            return {
+                ...base,
+                mode: target.kind === "numeric" ? "fader" : "button",
+                osc:
+                    target.kind === "numeric"
+                        ? {
+                              change: {
+                                  address: ccAddr,
+                                  args: [binding.channel + 1, binding.number, "$value_0_127"],
+                              },
+                          }
+                        : {
+                              press: {
+                                  address: ccAddr,
+                                  args: [binding.channel + 1, binding.number, trig.on],
+                              },
+                              release: {
+                                  address: ccAddr,
+                                  args: [binding.channel + 1, binding.number, trig.off],
+                              },
+                          },
+            };
+        }
+
+        const trig = triggerValuesForKind(target.kind);
+        return {
+            ...base,
+            mode: target.kind === "numeric" ? "fader-note" : "pad",
+            osc:
+                target.kind === "numeric"
+                    ? {
+                          change: {
+                              address: noteAddr,
+                              args: [binding.channel + 1, "$value_0_127", trig.on],
+                          },
+                      }
+                    : {
+                          press: {
+                              address: noteAddr,
+                              args: [binding.channel + 1, binding.number, trig.on],
+                          },
+                          release: {
+                              address: noteAddr,
+                              args: [binding.channel + 1, binding.number, trig.off],
+                          },
+                      },
+        };
+    });
+
+    const pages = chunk(controls, 12).map((rows, i) => ({
+        name: `Acid Banger ${i + 1}`,
+        controls: rows,
+    }));
+
+    return {
+        schema: "acid-banger.touchosc.blueprint.v1",
+        exportedAt: new Date().toISOString(),
+        touchosc: {
+            target: {
+                host,
+                port: udpPort,
+                namespace: ns,
+                addresses: {
+                    cc: ccAddr,
+                    note: noteAddr,
+                },
+            },
+            notes: [
+                "Build sheet for TouchOSC layout creation.",
+                "Mapped controls include concrete channel and CC/Note values.",
+                "Unmapped controls are listed so you can assign your own controls later.",
+            ],
+            pages,
+        },
+    };
+}
+
+function downloadJsonFile(filename: string, payload: unknown) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function MidiDevicesPanel(
@@ -1054,13 +1421,23 @@ function MidiDevicesPanel(
         midiCallbacks.clearAllMidiMappings();
     });
 
+    const exportTouchOsc = document.createElement("button");
+    exportTouchOsc.type = "button";
+    exportTouchOsc.classList.add("midi-map-clear-all");
+    exportTouchOsc.innerText = "Export TouchOSC blueprint (JSON)";
+    exportTouchOsc.addEventListener("click", () => {
+        const payload = buildTouchOscBlueprint(state, midiCallbacks);
+        downloadJsonFile("acid_banger_touchosc_blueprint.json", payload);
+    });
+
     learnBlock.append(
         learnHead,
         learnHint,
         learnStatus,
         cancelWait,
         mapWrap,
-        clearAll
+        clearAll,
+        exportTouchOsc
     );
 
     const refresh = document.createElement("button");
@@ -1423,6 +1800,39 @@ function OscPanel(state: ProgramState) {
         lastIn.innerText = t || "(none yet)";
     });
 
+    const debugHead = document.createElement("div");
+    debugHead.classList.add("osc-section-label");
+    debugHead.innerText = "Debug (recent incoming messages)";
+
+    const debugRow = document.createElement("div");
+    debugRow.classList.add("osc-debug-row");
+    const debugClear = document.createElement("button");
+    debugClear.type = "button";
+    debugClear.classList.add("osc-debug-clear");
+    debugClear.innerText = "Clear debug";
+    debugRow.append(debugClear);
+
+    const debugLog = document.createElement("div");
+    debugLog.classList.add("osc-debug-log");
+    const lines: string[] = [];
+    const MAX_LINES = 80;
+    function pushDebug(prefix: string, msg: string) {
+        const m = msg.trim();
+        if (!m) return;
+        lines.push(`[${prefix}] ${m}`);
+        if (lines.length > MAX_LINES) {
+            lines.splice(0, lines.length - MAX_LINES);
+        }
+        debugLog.textContent = lines.join("\n");
+        debugLog.scrollTop = debugLog.scrollHeight;
+    }
+    debugClear.addEventListener("click", () => {
+        lines.length = 0;
+        debugLog.textContent = "";
+    });
+    state.osc.lastIncomingOsc.subscribe((t) => pushDebug("OSC", t || ""));
+    state.midiLearn.lastIncoming.subscribe((t) => pushDebug("MIDI", t || ""));
+
     const outHead = document.createElement("div");
     outHead.classList.add("osc-section-label");
     outHead.innerText = "OSC out (UDP target for messages from this page)";
@@ -1470,7 +1880,7 @@ function OscPanel(state: ProgramState) {
     const emitNote = document.createElement("div");
     emitNote.classList.add("sync-hint");
     emitNote.innerText =
-        "Emit step: /acid/step (one float, step 0–15). Emit BPM: /acid/bpm when tempo changes. Both go to Target IP/port above. Full tables: OSC reference page link at top of this panel.";
+        "Emit step: /acid/step (UDP out). Emit BPM: /acid/bpm. Step/BPM UDP uses Target IP/port.";
 
     const st = document.createElement("div");
     st.classList.add("sync-status");
@@ -1520,6 +1930,9 @@ function OscPanel(state: ProgramState) {
         udpRef,
         inHead,
         lastIn,
+        debugHead,
+        debugRow,
+        debugLog,
         outHead,
         outGrid,
         emitRow,
@@ -1570,6 +1983,7 @@ export function UI(
                 midiMenu: midiTargetMenu,
             })
         ),
+        controlGroup(label("Visual"), group(Acid303Visual(state, analyser))),
         controlGroup(label("Meter"), group(AudioMeter(analyser)), "meter")
     );
 

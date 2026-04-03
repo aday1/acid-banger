@@ -26,8 +26,9 @@ function buildWsUrl(state) {
     }
     return `ws://${h}:${p}`;
 }
-export function attachOscBridgeClient(state, bpm) {
+export function attachOscBridgeClient(state, bpm, options = {}) {
     const { osc } = state;
+    const { onMidiCc, onMidiNote } = options;
     let socket = null;
     let reconnectTimer = null;
     function isConnected() {
@@ -68,6 +69,34 @@ export function attachOscBridgeClient(state, bpm) {
             if (Number.isFinite(v)) {
                 const [lo, hi] = bpm.bounds;
                 bpm.value = Math.max(lo, Math.min(hi, v));
+            }
+            return;
+        }
+        if (addr === "/mmc/midi/cc" || addr.endsWith("/midi/cc")) {
+            const channel1 = Number(args[0]);
+            const cc = Number(args[1]);
+            const value = Number(args[2]);
+            if (Number.isFinite(channel1) &&
+                Number.isFinite(cc) &&
+                Number.isFinite(value)) {
+                const channel0 = Math.floor(channel1) - 1;
+                const ccNum = Math.floor(cc);
+                const ccVal = Math.floor(value);
+                onMidiCc === null || onMidiCc === void 0 ? void 0 : onMidiCc(channel0, ccNum, ccVal);
+            }
+            return;
+        }
+        if (addr === "/mmc/midi/note" || addr.endsWith("/midi/note")) {
+            const channel1 = Number(args[0]);
+            const note = Number(args[1]);
+            const velocity = Number(args[2]);
+            if (Number.isFinite(channel1) &&
+                Number.isFinite(note) &&
+                Number.isFinite(velocity)) {
+                const channel0 = Math.floor(channel1) - 1;
+                const noteNum = Math.floor(note);
+                const vel = Math.floor(velocity);
+                onMidiNote === null || onMidiNote === void 0 ? void 0 : onMidiNote(channel0, noteNum, vel);
             }
         }
     }

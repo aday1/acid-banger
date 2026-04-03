@@ -51,7 +51,7 @@ On Windows, **`Launch-AcidBanger.ps1`** from the repo root can build, serve, ope
 
 ### MIDI learn
 
-One input serves both slave clock and learn. **Right-click** a control for learn/forget; mappings are listed in the MIDI panel. Details: CC vs note behaviour, **`acid-banger-midi-map-v1`** in **`localStorage`**.
+One input serves both slave clock and learn. **Right-click** a control for learn/forget; mappings are listed in the MIDI panel. You can also use **Export TouchOSC blueprint (JSON)** in the MIDI panel to generate a TouchOSC build sheet from current target mappings. Details: CC vs note behaviour, **`acid-banger-midi-map-v1`** in **`localStorage`**.
 
 ---
 

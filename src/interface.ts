@@ -147,6 +147,7 @@ export type ProgramState = {
     };
     midiLearn: {
         statusLine: GeneralisedParameter<string>;
+        lastIncoming: GeneralisedParameter<string>;
         listEpoch: GeneralisedParameter<number>;
     };
     mixer: {

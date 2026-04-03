@@ -368,6 +368,7 @@ function start() {
             masterVolume: parameter("Volume", [0, 1], 0.5),
             midiLearn: {
                 statusLine: genericParameter("midi learn status", ""),
+                lastIncoming: genericParameter("midi last incoming", ""),
                 listEpoch: genericParameter("midi learn list epoch", 0),
             },
             osc: {
@@ -425,6 +426,9 @@ function start() {
             setStatus: (s) => {
                 programState.midiLearn.statusLine.value = s;
             },
+            setLastIncoming: (s) => {
+                programState.midiLearn.lastIncoming.value = s;
+            },
         });
         let midiInputAttached = null;
         function wireMidiInput() {
@@ -450,7 +454,14 @@ function start() {
         programState.clock.midiInputId.subscribe(wireMidiInput);
         programState.clock.midiDeviceEpoch.subscribe(wireMidiInput);
         programState.clock.syncMode.subscribe(wireMidiInput);
-        const oscBridge = attachOscBridgeClient(programState, programState.clock.bpm);
+        const oscBridge = attachOscBridgeClient(programState, programState.clock.bpm, {
+            onMidiCc(channel0Based, cc, value) {
+                midiLearnCtl.handleMappedCc(channel0Based, cc, value);
+            },
+            onMidiNote(channel0Based, note, velocity) {
+                midiLearnCtl.handleMappedNote(channel0Based, note, velocity);
+            },
+        });
         let lastBpmOscSent = -1;
         programState.clock.currentStep.subscribe((step) => {
             if (programState.osc.emitStepOsc.value) {
@@ -486,6 +497,20 @@ function start() {
             },
             getMidiMappingsList() {
                 return midiLearnCtl.getBindingsList();
+            },
+            getMidiMappingForTarget(id) {
+                var _a;
+                const row = midiLearnCtl
+                    .getBindingsList()
+                    .find((entry) => entry.targetId === id);
+                return (_a = row === null || row === void 0 ? void 0 : row.binding) !== null && _a !== void 0 ? _a : null;
+            },
+            getMidiTargets() {
+                return Array.from(midiTargets.values()).map((target) => ({
+                    id: target.id,
+                    label: target.label,
+                    kind: target.kind,
+                }));
             },
         });
         document.body.append(ui);

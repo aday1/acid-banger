@@ -44,8 +44,42 @@ In the acid-banger page:
 Incoming JSON to browser (from UDP):
   {"address":"/acid/bpm","args":[142]}
 
+MoveMusicSaveEditor plug-and-play input (new):
+  The browser now also accepts MoveMusic-style OSC MIDI messages from this bridge:
+    /mmc/midi/cc   [channel_1_based, cc, value]
+    /mmc/midi/note [channel_1_based, note, velocity]
+  Example:
+    {"address":"/mmc/midi/cc","args":[1,16,100]}
+
 Outgoing command from browser (to UDP target):
   {"cmd":"oscSend","address":"/foo","args":[1,2],"remoteHost":"127.0.0.1","remotePort":9000}
 
 Test incoming OSC (after bridge is running):
   Send UDP to port 57121 with address /acid/bpm and one float argument.
+
+Default learned MIDI map (acid-banger localStorage):
+  First run seeds Channel 1 CC 16-39:
+    16 clock.bpm
+    17 master.volume
+    18 mixer.strip0.level
+    19 mixer.strip0.mute
+    20 mixer.strip0.solo
+    21 mixer.strip1.level
+    22 mixer.strip1.mute
+    23 mixer.strip1.solo
+    24 mixer.strip2.level
+    25 mixer.strip2.mute
+    26 mixer.strip2.solo
+    27 delay.dryWet
+    28 delay.feedback
+    29 note0.cutoff
+    30 note0.resonance
+    31 note0.envMod
+    32 note0.decay
+    33 note0.newPattern
+    34 note1.cutoff
+    35 note1.resonance
+    36 note1.envMod
+    37 note1.decay
+    38 note1.newPattern
+    39 gen.newNotes

@@ -62,6 +62,10 @@ wss.on("connection", (ws) => {
         }
         if (j.cmd === "oscSend" && j.address) {
             sendOscUdp(j.address, j.args, j.remoteHost, j.remotePort);
+            return;
+        }
+        if (j.cmd) {
+            console.warn("bridge: unknown WebSocket cmd (update bridge/server.mjs?)", j.cmd);
         }
     });
     ws.on("close", () => clients.delete(ws));

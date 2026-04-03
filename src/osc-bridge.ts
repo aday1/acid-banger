@@ -18,6 +18,15 @@ export type OscBridgeApi = {
     isConnected: () => boolean;
 };
 
+export type OscBridgeOptions = {
+    onMidiCc?: (channel0Based: number, cc: number, value: number) => void;
+    onMidiNote?: (
+        channel0Based: number,
+        note: number,
+        velocity: number
+    ) => void;
+};
+
 /** User-facing: "127.0.0.1 port 8765" instead of ws:// jargon */
 function describeBridgeSocket(url: string): string {
     const m = url.match(/^wss?:\/\/([^/:]+)(?::(\d+))?/i);
@@ -44,9 +53,11 @@ function buildWsUrl(state: ProgramState): string | null {
 
 export function attachOscBridgeClient(
     state: ProgramState,
-    bpm: NumericParameter
+    bpm: NumericParameter,
+    options: OscBridgeOptions = {}
 ): OscBridgeApi {
     const { osc } = state;
+    const { onMidiCc, onMidiNote } = options;
     let socket: WebSocket | null = null;
     let reconnectTimer: number | null = null;
 
@@ -89,6 +100,40 @@ export function attachOscBridgeClient(
             if (Number.isFinite(v)) {
                 const [lo, hi] = bpm.bounds;
                 bpm.value = Math.max(lo, Math.min(hi, v));
+            }
+            return;
+        }
+
+        if (addr === "/mmc/midi/cc" || addr.endsWith("/midi/cc")) {
+            const channel1 = Number(args[0]);
+            const cc = Number(args[1]);
+            const value = Number(args[2]);
+            if (
+                Number.isFinite(channel1) &&
+                Number.isFinite(cc) &&
+                Number.isFinite(value)
+            ) {
+                const channel0 = Math.floor(channel1) - 1;
+                const ccNum = Math.floor(cc);
+                const ccVal = Math.floor(value);
+                onMidiCc?.(channel0, ccNum, ccVal);
+            }
+            return;
+        }
+
+        if (addr === "/mmc/midi/note" || addr.endsWith("/midi/note")) {
+            const channel1 = Number(args[0]);
+            const note = Number(args[1]);
+            const velocity = Number(args[2]);
+            if (
+                Number.isFinite(channel1) &&
+                Number.isFinite(note) &&
+                Number.isFinite(velocity)
+            ) {
+                const channel0 = Math.floor(channel1) - 1;
+                const noteNum = Math.floor(note);
+                const vel = Math.floor(velocity);
+                onMidiNote?.(channel0, noteNum, vel);
             }
         }
     }
