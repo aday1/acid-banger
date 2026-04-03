@@ -878,26 +878,33 @@ button:hover {
 
 .acid-meter-canvas {
     object-fit: fill;
-    height: 112px;
+    height: 128px;
     width: 100%;
     border: 1px solid #3a2d25;
     background: #090a0f;
     box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.8), 0 0 16px rgba(255, 124, 72, 0.18);
 }
 
-.acid-meter-split-canvas {
-    object-fit: fill;
-    width: 100%;
-    height: 120px;
-    border: 1px solid #2f3340;
-    background: #07080d;
-    box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.76), 0 0 10px rgba(126, 178, 255, 0.12);
-}
-
 .acid-meter-wrap {
     display: flex;
     flex-direction: column;
     gap: 6px;
+}
+
+.acid-meter-split-wrap {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    width: 100%;
+}
+
+.acid-meter-layer-canvas {
+    object-fit: fill;
+    width: 100%;
+    height: 84px;
+    border: 1px solid #2f3340;
+    background: #07080d;
+    box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.76), 0 0 10px rgba(126, 178, 255, 0.12);
 }
 
 .acid-meter-controls {

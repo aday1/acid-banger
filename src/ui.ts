@@ -834,15 +834,30 @@ function AudioMeter(analyser: AnalyserNode) {
     const canvas = document.createElement("canvas");
     canvas.style.width = "100%";
     canvas.classList.add("acid-meter-canvas");
-    let w = (canvas.width = 320);
-    const h = (canvas.height = 112);
+    let w = (canvas.width = 340);
+    const h = (canvas.height = 128);
     const g = canvas.getContext("2d") as CanvasRenderingContext2D;
-    const splitCanvas = document.createElement("canvas");
-    splitCanvas.style.width = "100%";
-    splitCanvas.classList.add("acid-meter-split-canvas");
-    let sw = (splitCanvas.width = 320);
-    const sh = (splitCanvas.height = 120);
-    const sg = splitCanvas.getContext("2d") as CanvasRenderingContext2D;
+    const splitWrap = document.createElement("div");
+    splitWrap.classList.add("acid-meter-split-wrap");
+    const bandCanvases = {
+        low: document.createElement("canvas"),
+        mid: document.createElement("canvas"),
+        high: document.createElement("canvas"),
+    };
+    let bw = 340;
+    const bh = 84;
+    for (const c of [bandCanvases.low, bandCanvases.mid, bandCanvases.high]) {
+        c.style.width = "100%";
+        c.classList.add("acid-meter-layer-canvas");
+        c.width = bw;
+        c.height = bh;
+        splitWrap.append(c);
+    }
+    const bg = {
+        low: bandCanvases.low.getContext("2d") as CanvasRenderingContext2D,
+        mid: bandCanvases.mid.getContext("2d") as CanvasRenderingContext2D,
+        high: bandCanvases.high.getContext("2d") as CanvasRenderingContext2D,
+    };
 
     const waveform = new Uint8Array(analyser.fftSize);
     const fft = new Uint8Array(analyser.frequencyBinCount);
@@ -856,21 +871,32 @@ function AudioMeter(analyser: AnalyserNode) {
     let showGrid = true;
     let showScan = true;
     let showSplitBands = true;
+    let showLowLayer = true;
+    let showMidLayer = true;
+    let showHighLayer = true;
+    let meterTick = 0;
     let meterAlign: "left" | "center" | "right" = "center";
 
     function setMeterAlign() {
+        const all = [canvas, splitWrap];
         if (meterAlign === "left") {
-            canvas.style.marginLeft = "0";
-            canvas.style.marginRight = "auto";
-            canvas.style.maxWidth = "92%";
+            for (const el of all) {
+                el.style.marginLeft = "0";
+                el.style.marginRight = "auto";
+                el.style.maxWidth = "92%";
+            }
         } else if (meterAlign === "right") {
-            canvas.style.marginLeft = "auto";
-            canvas.style.marginRight = "0";
-            canvas.style.maxWidth = "92%";
+            for (const el of all) {
+                el.style.marginLeft = "auto";
+                el.style.marginRight = "0";
+                el.style.maxWidth = "92%";
+            }
         } else {
-            canvas.style.marginLeft = "auto";
-            canvas.style.marginRight = "auto";
-            canvas.style.maxWidth = "100%";
+            for (const el of all) {
+                el.style.marginLeft = "auto";
+                el.style.marginRight = "auto";
+                el.style.maxWidth = "100%";
+            }
         }
     }
     setMeterAlign();
@@ -914,22 +940,39 @@ function AudioMeter(analyser: AnalyserNode) {
         meterToggle("Scan", true, (on) => (showScan = on)),
         meterToggle("Split bands", true, (on) => {
             showSplitBands = on;
-            splitCanvas.style.display = on ? "block" : "none";
+            splitWrap.style.display = on ? "grid" : "none";
+        }),
+        meterToggle("LOW layer", true, (on) => {
+            showLowLayer = on;
+            bandCanvases.low.style.display = on ? "block" : "none";
+        }),
+        meterToggle("MID layer", true, (on) => {
+            showMidLayer = on;
+            bandCanvases.mid.style.display = on ? "block" : "none";
+        }),
+        meterToggle("HIGH layer", true, (on) => {
+            showHighLayer = on;
+            bandCanvases.high.style.display = on ? "block" : "none";
         }),
         alignSelect
     );
-    wrap.append(controls, canvas, splitCanvas);
+    wrap.append(controls, canvas, splitWrap);
 
     function draw() {
+        meterTick++;
         analyser.getByteTimeDomainData(waveform);
         analyser.getByteFrequencyData(fft);
-        analyser.getByteFrequencyData(splitFft);
+        const drawSplitThisFrame = meterTick % 2 === 0;
+        if (drawSplitThisFrame) analyser.getByteFrequencyData(splitFft);
 
         if (canvas.clientWidth > 0 && canvas.clientWidth !== w) {
             w = canvas.width = Math.max(180, Math.floor(canvas.clientWidth));
         }
-        if (splitCanvas.clientWidth > 0 && splitCanvas.clientWidth !== sw) {
-            sw = splitCanvas.width = Math.max(180, Math.floor(splitCanvas.clientWidth));
+        if (splitWrap.clientWidth > 0 && splitWrap.clientWidth !== bw) {
+            bw = Math.max(180, Math.floor(splitWrap.clientWidth));
+            bandCanvases.low.width = bw;
+            bandCanvases.mid.width = bw;
+            bandCanvases.high.width = bw;
         }
 
         const t = performance.now() * 0.001;
@@ -1014,45 +1057,65 @@ function AudioMeter(analyser: AnalyserNode) {
         g.lineTo(w, h * 0.66);
         g.stroke();
 
-        if (showSplitBands) {
-            const bandRows = [
-                { name: "LOW", from: 0.0, to: 0.12, col: "rgba(255,120,78,0.92)" },
-                { name: "MID", from: 0.12, to: 0.42, col: "rgba(125,214,255,0.9)" },
-                { name: "HIGH", from: 0.42, to: 1.0, col: "rgba(193,126,255,0.92)" },
+        if (showSplitBands && drawSplitThisFrame) {
+            const bands = [
+                {
+                    name: "LOW",
+                    from: 0.0,
+                    to: 0.12,
+                    col: "rgba(255,120,78,0.92)",
+                    ctx: bg.low,
+                    visible: showLowLayer,
+                },
+                {
+                    name: "MID",
+                    from: 0.12,
+                    to: 0.42,
+                    col: "rgba(125,214,255,0.9)",
+                    ctx: bg.mid,
+                    visible: showMidLayer,
+                },
+                {
+                    name: "HIGH",
+                    from: 0.42,
+                    to: 1.0,
+                    col: "rgba(193,126,255,0.92)",
+                    ctx: bg.high,
+                    visible: showHighLayer,
+                },
             ] as const;
-            const rowH = sh / bandRows.length;
-            sg.fillStyle = "#07080d";
-            sg.fillRect(0, 0, sw, sh);
-            for (let r = 0; r < bandRows.length; r++) {
-                const row = bandRows[r];
-                const y0 = r * rowH;
-                const yMid = y0 + rowH * 0.5;
+            for (const row of bands) {
+                const gg = row.ctx;
+                if (!row.visible) continue;
+                gg.fillStyle = "#07080d";
+                gg.fillRect(0, 0, bw, bh);
+                const yMid = bh * 0.5;
                 const from = Math.floor(row.from * splitFft.length);
                 const to = Math.max(from + 1, Math.floor(row.to * splitFft.length));
-                const points = Math.min(160, to - from);
-                sg.strokeStyle = row.col;
-                sg.shadowColor = row.col.replace("0.9", "0.45").replace("0.92", "0.45");
-                sg.shadowBlur = 6;
-                sg.beginPath();
-                sg.moveTo(0, yMid);
+                const points = Math.min(120, to - from);
+                gg.strokeStyle = row.col;
+                gg.shadowColor = row.col.replace("0.9", "0.45").replace("0.92", "0.45");
+                gg.shadowBlur = 7;
+                gg.beginPath();
+                gg.moveTo(0, yMid);
                 for (let i = 0; i < points; i++) {
                     const idx = from + Math.floor((i / Math.max(1, points - 1)) * (to - from - 1));
                     const v = splitFft[idx] / 255;
-                    const amp = (rowH * 0.42) * Math.pow(v, 0.75);
-                    const px = (i / Math.max(1, points - 1)) * sw;
-                    const py = yMid - amp + Math.sin((i * 0.22) + t * 3.0) * (rowH * 0.03);
-                    sg.lineTo(px, py);
+                    const amp = (bh * 0.45) * Math.pow(v, 0.7);
+                    const px = (i / Math.max(1, points - 1)) * bw;
+                    const py = yMid - amp + Math.sin((i * 0.2) + t * 2.4) * (bh * 0.035);
+                    gg.lineTo(px, py);
                 }
-                sg.stroke();
-                sg.shadowBlur = 0;
-                sg.fillStyle = "rgba(214,224,240,0.65)";
-                sg.font = "10px monospace";
-                sg.fillText(row.name, 8, y0 + 12);
-                sg.strokeStyle = "rgba(255,255,255,0.08)";
-                sg.beginPath();
-                sg.moveTo(0, y0 + rowH - 0.5);
-                sg.lineTo(sw, y0 + rowH - 0.5);
-                sg.stroke();
+                gg.stroke();
+                gg.shadowBlur = 0;
+                gg.fillStyle = "rgba(214,224,240,0.68)";
+                gg.font = "11px monospace";
+                gg.fillText(row.name, 10, 14);
+                gg.strokeStyle = "rgba(255,255,255,0.08)";
+                gg.beginPath();
+                gg.moveTo(0, yMid + 0.5);
+                gg.lineTo(bw, yMid + 0.5);
+                gg.stroke();
             }
         }
 

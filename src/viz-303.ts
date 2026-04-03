@@ -7,6 +7,7 @@ type KnobBinding = {
     flash: THREE.Mesh;
     getValue: () => number;
     baseY: number;
+    source: "bassline" | "drums";
     prevValue: number;
     flashLevel: number;
 };
@@ -16,6 +17,22 @@ type PatchCable = {
     a: THREE.Object3D;
     b: THREE.Object3D;
     lift: number;
+};
+
+type TrippyMaterialBinding = {
+    mat: THREE.MeshStandardMaterial;
+    baseColor: THREE.Color;
+    baseEmissive: THREE.Color;
+    rate: number;
+    shift: number;
+};
+
+type TrippyOrb = {
+    mesh: THREE.Mesh;
+    base: THREE.Vector3;
+    speed: number;
+    amp: number;
+    phase: number;
 };
 
 type CamKeyframe = {
@@ -45,46 +62,46 @@ function makeKnob(
     root.position.set(x, 0.31, z);
 
     const skirt = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.34, 0.36, 0.16, 36),
+        new THREE.CylinderGeometry(0.4, 0.43, 0.18, 24),
         new THREE.MeshStandardMaterial({
-            color: 0x111318,
-            roughness: 0.72,
-            metalness: 0.1,
+            color: 0x17192a,
+            roughness: 0.62,
+            metalness: 0.06,
         })
     );
     skirt.position.y = 0.03;
     root.add(skirt);
 
     const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.26, 0.29, 0.2, 36),
+        new THREE.CylinderGeometry(0.33, 0.35, 0.24, 24),
         new THREE.MeshStandardMaterial({
             color,
-            roughness: 0.42,
-            metalness: 0.38,
+            roughness: 0.5,
+            metalness: 0.18,
         })
     );
-    body.position.y = 0.14;
+    body.position.y = 0.16;
     root.add(body);
 
     const marker = new THREE.Mesh(
-        new THREE.BoxGeometry(0.035, 0.035, 0.2),
+        new THREE.BoxGeometry(0.06, 0.045, 0.24),
         new THREE.MeshStandardMaterial({
-            color: 0xe8ddd0,
-            roughness: 0.35,
-            metalness: 0.2,
+            color: 0xfce9b5,
+            roughness: 0.42,
+            metalness: 0.08,
         })
     );
-    marker.position.set(0, 0.24, 0.09);
+    marker.position.set(0, 0.28, 0.11);
     root.add(marker);
 
     const flash = new THREE.Mesh(
-        new THREE.TorusGeometry(0.4, 0.035, 12, 38),
+        new THREE.TorusGeometry(0.46, 0.055, 10, 28),
         new THREE.MeshStandardMaterial({
             color: 0x9c6cff,
             emissive: 0x2e0f66,
             emissiveIntensity: 0.0,
-            roughness: 0.4,
-            metalness: 0.45,
+            roughness: 0.58,
+            metalness: 0.12,
             transparent: true,
             opacity: 0.88,
         })
@@ -118,45 +135,19 @@ function panelTexture(): THREE.CanvasTexture {
     g.lineWidth = 6;
     g.strokeRect(30, 30, w - 60, h - 60);
 
-    const sec = (x: number, y: number, ww: number, hh: number, title: string) => {
+    const sec = (x: number, y: number, ww: number, hh: number) => {
         g.fillStyle = "rgba(0,0,0,0.12)";
         g.fillRect(x, y, ww, hh);
         g.strokeStyle = "rgba(255,255,255,0.14)";
         g.lineWidth = 2;
         g.strokeRect(x, y, ww, hh);
-        g.fillStyle = "#151515";
-        g.font = "bold 34px Arial";
-        g.fillText(title, x + 18, y + 42);
     };
 
-    sec(70, 120, 930, 250, "TUNING");
-    sec(1030, 120, 930, 250, "FILTER");
-    sec(70, 390, 1890, 250, "SEQUENCER");
-    sec(70, 660, 930, 290, "ENVELOPE");
-    sec(1030, 660, 930, 290, "MIXER");
-
-    g.fillStyle = "#111";
-    g.font = "bold 66px Arial";
-    g.fillText("BASS LINE", 95, 86);
-    g.fillStyle = "#d9a13f";
-    g.font = "bold 74px Arial";
-    g.fillText("303", 430, 86);
-
-    g.fillStyle = "#1e1e1e";
-    g.font = "bold 30px Arial";
-    const knobLabels = [
-        ["CUTOFF", 1080, 200],
-        ["RESONANCE", 1320, 200],
-        ["ENV MOD", 1560, 200],
-        ["DECAY", 1790, 200],
-        ["CUT 2", 1080, 300],
-        ["RES 2", 1320, 300],
-        ["DELAY", 290, 740],
-        ["FEEDBACK", 530, 740],
-        ["VOLUME", 1250, 740],
-        ["TEMPO", 1490, 740],
-    ] as const;
-    for (const [txt, x, y] of knobLabels) g.fillText(txt, x, y);
+    sec(70, 120, 930, 250);
+    sec(1030, 120, 930, 250);
+    sec(70, 390, 1890, 250);
+    sec(70, 660, 930, 290);
+    sec(1030, 660, 930, 290);
 
     g.font = "bold 24px Arial";
     for (let i = 0; i < 16; i++) {
@@ -164,7 +155,7 @@ function panelTexture(): THREE.CanvasTexture {
         g.fillStyle = i % 4 === 0 ? "#101010" : "#2d2d2d";
         g.fillRect(x - 38, 482, 74, 42);
         g.fillStyle = "#f2f2f2";
-        g.fillText(String(i + 1), x - 10, 510);
+        g.fillRect(x - 10, 496, 20, 3);
     }
 
     const tx = new THREE.CanvasTexture(c);
@@ -192,29 +183,10 @@ function drumPanelTexture(): THREE.CanvasTexture {
     g.lineWidth = 5;
     g.strokeRect(26, 26, w - 52, h - 52);
 
-    g.fillStyle = "#141414";
-    g.font = "bold 56px Arial";
-    g.fillText("RHYTHM COMPOSER", 58, 74);
-    g.fillStyle = "#cc3b2c";
-    g.font = "bold 72px Arial";
-    g.fillText("909", 1180, 78);
-
     g.fillStyle = "rgba(0,0,0,0.13)";
     g.fillRect(55, 115, w - 110, 200);
     g.fillRect(55, 340, w - 110, 200);
     g.fillRect(55, 560, w - 110, 290);
-
-    g.fillStyle = "#151515";
-    g.font = "bold 28px Arial";
-    g.fillText("TUNING", 85, 158);
-    g.fillText("DECAY", 345, 158);
-    g.fillText("SNAPPY", 605, 158);
-    g.fillText("ACCENT", 865, 158);
-    g.fillText("STEP SEQUENCER", 82, 385);
-    g.fillText("BD", 88, 628);
-    g.fillText("OH", 88, 693);
-    g.fillText("CH", 88, 758);
-    g.fillText("SD", 88, 823);
 
     g.font = "bold 21px Arial";
     for (let i = 0; i < 16; i++) {
@@ -222,7 +194,7 @@ function drumPanelTexture(): THREE.CanvasTexture {
         g.fillStyle = i % 4 === 0 ? "#121212" : "#2b2b2b";
         g.fillRect(x - 30, 430, 60, 34);
         g.fillStyle = "#ededed";
-        g.fillText(String(i + 1), x - 9, 454);
+        g.fillRect(x - 10, 446, 20, 3);
     }
 
     const tx = new THREE.CanvasTexture(c);
@@ -248,14 +220,8 @@ function mixerPanelTexture(): THREE.CanvasTexture {
     g.strokeStyle = "#232730";
     g.lineWidth = 4;
     g.strokeRect(24, 24, w - 48, h - 48);
-    g.fillStyle = "#0f1116";
-    g.font = "bold 42px Arial";
-    g.fillText("MIXER", 52, 64);
-    g.fillStyle = "#c6cfde";
-    g.font = "bold 20px Arial";
     for (let i = 0; i < 6; i++) {
         const x = 130 + i * 210;
-        g.fillText(`CH ${i + 1}`, x - 34, 122);
         g.fillStyle = "rgba(18,19,24,0.75)";
         g.fillRect(x - 18, 160, 36, 420);
         g.fillStyle = "#7ad2ff";
@@ -264,8 +230,6 @@ function mixerPanelTexture(): THREE.CanvasTexture {
     }
     g.fillStyle = "#f7ba7d";
     g.fillRect(w - 170, 140, 120, 20);
-    g.fillStyle = "#0f1116";
-    g.fillText("MASTER", w - 180, 120);
     const tx = new THREE.CanvasTexture(c);
     tx.colorSpace = THREE.SRGBColorSpace;
     tx.needsUpdate = true;
@@ -290,9 +254,6 @@ function speakerGrilleTexture(): THREE.CanvasTexture {
     }
     g.fillStyle = "rgba(255,255,255,0.05)";
     g.fillRect(18, 18, w - 36, 42);
-    g.fillStyle = "#cad4e8";
-    g.font = "bold 26px Arial";
-    g.fillText("ACID SOUND", 26, 48);
     const tx = new THREE.CanvasTexture(c);
     tx.colorSpace = THREE.SRGBColorSpace;
     tx.needsUpdate = true;
@@ -368,6 +329,10 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
     vjMotionBtn.type = "button";
     vjMotionBtn.classList.add("viz303-rec-btn");
     vjMotionBtn.textContent = "VJ walls motion: on";
+    const trippyHwBtn = document.createElement("button");
+    trippyHwBtn.type = "button";
+    trippyHwBtn.classList.add("viz303-rec-btn");
+    trippyHwBtn.textContent = "Trippy hardware: on";
     const fullscreenBtn = document.createElement("button");
     fullscreenBtn.type = "button";
     fullscreenBtn.classList.add("viz303-rec-btn");
@@ -389,6 +354,7 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
         vjToggle,
         shaderCycleBtn,
         vjMotionBtn,
+        trippyHwBtn,
         fullscreenBtn,
         sizeSlider,
         resetCam,
@@ -617,6 +583,7 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
     });
     let shaderCycleEnabled = true;
     let vjMotionEnabled = true;
+    let trippyHardwareEnabled = true;
     shaderCycleBtn.addEventListener("click", () => {
         shaderCycleEnabled = !shaderCycleEnabled;
         shaderCycleBtn.textContent = `Shader cycle: ${shaderCycleEnabled ? "on" : "off"}`;
@@ -624,6 +591,10 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
     vjMotionBtn.addEventListener("click", () => {
         vjMotionEnabled = !vjMotionEnabled;
         vjMotionBtn.textContent = `VJ walls motion: ${vjMotionEnabled ? "on" : "off"}`;
+    });
+    trippyHwBtn.addEventListener("click", () => {
+        trippyHardwareEnabled = !trippyHardwareEnabled;
+        trippyHwBtn.textContent = `Trippy hardware: ${trippyHardwareEnabled ? "on" : "off"}`;
     });
     trackRecBtn.addEventListener("click", () => {
         if (!trackRecording) {
@@ -648,13 +619,16 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
         }
     });
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.05);
+    const keyLight = new THREE.DirectionalLight(0xfff0da, 1.28);
     keyLight.position.set(4, 7, 4);
     scene.add(keyLight);
-    const fillLight = new THREE.DirectionalLight(0x99a6ff, 0.28);
+    const fillLight = new THREE.DirectionalLight(0x7ec8ff, 0.52);
     fillLight.position.set(-7, 4, -2);
     scene.add(fillLight);
-    scene.add(new THREE.AmbientLight(0x5d6168, 0.42));
+    const magentaFill = new THREE.DirectionalLight(0xe06dff, 0.34);
+    magentaFill.position.set(1, 3, -8);
+    scene.add(magentaFill);
+    scene.add(new THREE.AmbientLight(0x6b67a2, 0.56));
 
     const vjUniforms = {
         uTime: { value: 0 },
@@ -820,6 +794,8 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
     const rig303 = new THREE.Group();
     rig303.position.set(3.5, 0, 0.1);
     rig303.rotation.y = -0.15;
+    const rig303BaseY = rig303.position.y;
+    rig303.scale.set(1.12, 1.2, 1.12);
     scene.add(rig303);
     const rig = rig303;
 
@@ -877,6 +853,29 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
     const sideRight = sideLeft.clone();
     sideRight.position.x = 5.67;
     rig.add(sideRight);
+    const wingL = new THREE.Mesh(
+        new THREE.ConeGeometry(0.34, 0.7, 4),
+        new THREE.MeshStandardMaterial({ color: 0x5b62ff, roughness: 0.55, metalness: 0.08 })
+    );
+    wingL.rotation.z = Math.PI / 2;
+    wingL.position.set(-5.82, 0.18, -1.9);
+    rig.add(wingL);
+    const wingR = wingL.clone();
+    wingR.position.x = 5.82;
+    wingR.rotation.z = -Math.PI / 2;
+    rig.add(wingR);
+    const neonStrip = new THREE.Mesh(
+        new THREE.BoxGeometry(10.2, 0.07, 0.09),
+        new THREE.MeshStandardMaterial({
+            color: 0xa67cff,
+            emissive: 0x3d1870,
+            emissiveIntensity: 1.5,
+            roughness: 0.4,
+            metalness: 0.08,
+        })
+    );
+    neonStrip.position.set(0, 0.52, 2.06);
+    rig.add(neonStrip);
 
     let tuneValue = 0.5;
     let accentValue = 0;
@@ -899,6 +898,7 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
             flash: knob.flash,
             getValue: k.getValue,
             baseY: knob.root.position.y,
+            source: "bassline",
             prevValue: k.getValue(),
             flashLevel: 0,
         });
@@ -960,6 +960,8 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
     const rig909 = new THREE.Group();
     rig909.position.set(-6.8, -0.02, -0.4);
     rig909.rotation.y = 0.22;
+    const rig909BaseY = rig909.position.y;
+    rig909.scale.set(1.08, 1.14, 1.08);
     scene.add(rig909);
 
     const drumBody = new THREE.Mesh(
@@ -983,6 +985,20 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
     drumTop.rotation.x = -Math.PI / 2;
     drumTop.position.y = 0.34;
     rig909.add(drumTop);
+    for (let i = 0; i < 8; i++) {
+        const pad = new THREE.Mesh(
+            new THREE.BoxGeometry(0.5, 0.08, 0.36),
+            new THREE.MeshStandardMaterial({
+                color: i % 2 ? 0xffa46e : 0x8bc8ff,
+                emissive: i % 2 ? 0x4c1d0a : 0x163b52,
+                emissiveIntensity: 0.8,
+                roughness: 0.48,
+                metalness: 0.08,
+            })
+        );
+        pad.position.set(-2.6 + i * 0.74, 0.4, 1.7);
+        rig909.add(pad);
+    }
 
     const drumLeds: THREE.Mesh[] = [];
     for (let i = 0; i < 16; i++) {
@@ -1035,6 +1051,7 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
             flash: knob.flash,
             getValue: () => drumLaneEnergy[i],
             baseY: knob.root.position.y,
+            source: "drums",
             prevValue: 0,
             flashLevel: 0,
         });
@@ -1043,6 +1060,8 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
     const rigMixer = new THREE.Group();
     rigMixer.position.set(-1.7, -0.04, -4.3);
     rigMixer.rotation.y = 0.08;
+    const rigMixerBaseY = rigMixer.position.y;
+    rigMixer.scale.set(1.12, 1.12, 1.08);
     scene.add(rigMixer);
     const mixerBody = new THREE.Mesh(
         new THREE.BoxGeometry(5.8, 0.66, 3.3),
@@ -1101,7 +1120,11 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
     rigMixer.add(mixerSideR);
     const speakersGroup = new THREE.Group();
     speakersGroup.position.set(0.2, 0, -8.6);
+    const speakersBaseY = speakersGroup.position.y;
+    speakersGroup.scale.set(1.14, 1.14, 1.1);
     scene.add(speakersGroup);
+    const speakerWoofers: THREE.Mesh[] = [];
+    const speakerTweeters: THREE.Mesh[] = [];
     function makeSpeaker(x: number) {
         const g = new THREE.Group();
         g.position.set(x, 0, 0);
@@ -1128,6 +1151,7 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
         woofer.rotation.x = Math.PI / 2;
         woofer.position.set(0, 1.05, 0.95);
         g.add(woofer);
+        speakerWoofers.push(woofer);
         const tweeter = new THREE.Mesh(
             new THREE.CylinderGeometry(0.24, 0.24, 0.14, 24),
             new THREE.MeshStandardMaterial({ color: 0x2f3440, roughness: 0.3, metalness: 0.42 })
@@ -1135,6 +1159,7 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
         tweeter.rotation.x = Math.PI / 2;
         tweeter.position.set(0, 2.22, 0.96);
         g.add(tweeter);
+        speakerTweeters.push(tweeter);
         const footL = new THREE.Mesh(
             new THREE.BoxGeometry(0.42, 0.08, 0.28),
             new THREE.MeshStandardMaterial({ color: 0x090b10, roughness: 0.8, metalness: 0.15 })
@@ -1322,6 +1347,101 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.55;
     scene.add(floor);
+    const funDeco = new THREE.Group();
+    scene.add(funDeco);
+    for (let i = 0; i < 24; i++) {
+        const orb = new THREE.Mesh(
+            new THREE.SphereGeometry(0.16 + (i % 3) * 0.04, 8, 6),
+            new THREE.MeshStandardMaterial({
+                color: new THREE.Color().setHSL((i * 0.13) % 1, 0.8, 0.62),
+                emissive: new THREE.Color().setHSL((i * 0.13) % 1, 0.7, 0.2),
+                emissiveIntensity: 1.0,
+                roughness: 0.5,
+                metalness: 0.08,
+            })
+        );
+        orb.position.set(
+            -11 + (i % 8) * 3.0 + ((i / 8) | 0) * 0.22,
+            0.08 + ((i / 8) | 0) * 0.1,
+            -10 + ((i / 8) | 0) * 3.1 + (i % 2 ? 0.65 : -0.3)
+        );
+        funDeco.add(orb);
+    }
+    const acidHaloGroup = new THREE.Group();
+    scene.add(acidHaloGroup);
+    const acidHalos: THREE.Mesh[] = [];
+    function addHalo(r: number, y: number, z: number, col: THREE.ColorRepresentation) {
+        const halo = new THREE.Mesh(
+            new THREE.TorusGeometry(r, 0.1, 8, 24),
+            new THREE.MeshStandardMaterial({
+                color: col,
+                emissive: col,
+                emissiveIntensity: 0.85,
+                roughness: 0.5,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.75,
+            })
+        );
+        halo.rotation.x = Math.PI / 2;
+        halo.position.set(0, y, z);
+        acidHaloGroup.add(halo);
+        acidHalos.push(halo);
+    }
+    addHalo(3.1, 1.2, 0.4, 0xff7dd8);
+    addHalo(4.25, 1.7, -2.3, 0x7cd4ff);
+    function addCartoonBumpers(
+        parent: THREE.Object3D,
+        points: Array<[number, number, number]>,
+        hueStart: number
+    ) {
+        for (let i = 0; i < points.length; i++) {
+            const p = points[i];
+            const hue = (hueStart + i * 0.12) % 1;
+            const bump = new THREE.Mesh(
+                new THREE.SphereGeometry(0.17 + (i % 2) * 0.06, 10, 8),
+                new THREE.MeshStandardMaterial({
+                    color: new THREE.Color().setHSL(hue, 0.85, 0.64),
+                    emissive: new THREE.Color().setHSL(hue, 0.8, 0.24),
+                    emissiveIntensity: 0.9,
+                    roughness: 0.45,
+                    metalness: 0.08,
+                })
+            );
+            bump.position.set(p[0], p[1], p[2]);
+            parent.add(bump);
+        }
+    }
+    addCartoonBumpers(
+        rig303,
+        [
+            [-5.0, 0.62, -2.2],
+            [5.0, 0.62, -2.2],
+            [-5.0, 0.62, 2.2],
+            [5.0, 0.62, 2.2],
+        ],
+        0.62
+    );
+    addCartoonBumpers(
+        rig909,
+        [
+            [-3.7, 0.56, -2.0],
+            [3.7, 0.56, -2.0],
+            [-3.7, 0.56, 2.0],
+            [3.7, 0.56, 2.0],
+        ],
+        0.1
+    );
+    addCartoonBumpers(
+        rigMixer,
+        [
+            [-2.4, 0.58, -1.3],
+            [2.4, 0.58, -1.3],
+            [-2.4, 0.58, 1.3],
+            [2.4, 0.58, 1.3],
+        ],
+        0.4
+    );
     const floorRow = document.createElement("div");
     floorRow.classList.add("viz303-mixer-row");
     const floorChk = document.createElement("input");
@@ -1332,6 +1452,106 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
     });
     floorRow.append(floorChk, document.createTextNode(" Show floor"));
     visualMixer.append(floorRow);
+    const decoRow = document.createElement("div");
+    decoRow.classList.add("viz303-mixer-row");
+    const decoChk = document.createElement("input");
+    decoChk.type = "checkbox";
+    decoChk.checked = true;
+    decoChk.addEventListener("change", () => {
+        funDeco.visible = decoChk.checked;
+    });
+    decoRow.append(decoChk, document.createTextNode(" Show fun deco"));
+    visualMixer.append(decoRow);
+    const haloRow = document.createElement("div");
+    haloRow.classList.add("viz303-mixer-row");
+    const haloChk = document.createElement("input");
+    haloChk.type = "checkbox";
+    haloChk.checked = true;
+    haloChk.addEventListener("change", () => {
+        acidHaloGroup.visible = haloChk.checked;
+    });
+    haloRow.append(haloChk, document.createTextNode(" Show acid halos"));
+    visualMixer.append(haloRow);
+    const trippyRow = document.createElement("div");
+    trippyRow.classList.add("viz303-mixer-row");
+    const trippyChk = document.createElement("input");
+    trippyChk.type = "checkbox";
+    trippyChk.checked = true;
+    trippyChk.addEventListener("change", () => {
+        trippyHardwareEnabled = trippyChk.checked;
+        trippyHwBtn.textContent = `Trippy hardware: ${trippyHardwareEnabled ? "on" : "off"}`;
+    });
+    trippyRow.append(trippyChk, document.createTextNode(" Trippy hardware fx"));
+    visualMixer.append(trippyRow);
+
+    function toonify(root: THREE.Object3D, tint: THREE.ColorRepresentation, amount = 0.22) {
+        const tintColor = new THREE.Color(tint);
+        root.traverse((obj) => {
+            const mat = (obj as THREE.Mesh).material;
+            if (!mat || Array.isArray(mat)) return;
+            if (mat instanceof THREE.MeshStandardMaterial) {
+                mat.color.lerp(tintColor, amount);
+                mat.emissive.lerp(tintColor, amount * 0.16);
+                mat.roughness = Math.max(mat.roughness, 0.5);
+                mat.metalness = Math.min(mat.metalness, 0.18);
+                mat.flatShading = true;
+                mat.needsUpdate = true;
+            }
+        });
+    }
+    // Stylized cartoon look: chunkier lighting and brighter palette.
+    toonify(rig303, 0x6d79ff, 0.5);
+    toonify(rig909, 0xff7b5b, 0.5);
+    toonify(rigMixer, 0x58d6ff, 0.42);
+    toonify(speakersGroup, 0xb07bff, 0.42);
+    const trippyBindings: TrippyMaterialBinding[] = [];
+    function registerTrippyMaterials(root: THREE.Object3D, baseRate: number, shift = 0.14) {
+        root.traverse((obj) => {
+            const mat = (obj as THREE.Mesh).material;
+            if (!mat || Array.isArray(mat)) return;
+            if (mat instanceof THREE.MeshStandardMaterial) {
+                trippyBindings.push({
+                    mat,
+                    baseColor: mat.color.clone(),
+                    baseEmissive: mat.emissive.clone(),
+                    rate: baseRate + Math.random() * 0.7,
+                    shift,
+                });
+            }
+        });
+    }
+    registerTrippyMaterials(rig303, 1.35, 0.14);
+    registerTrippyMaterials(rig909, 1.1, 0.12);
+    registerTrippyMaterials(rigMixer, 0.9, 0.1);
+    registerTrippyMaterials(speakersGroup, 0.95, 0.1);
+    const trippyOrbs: TrippyOrb[] = [];
+    function makeTrippyOrb(parent: THREE.Object3D, x: number, y: number, z: number, hue: number) {
+        const m = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(0.18 + Math.random() * 0.08, 0),
+            new THREE.MeshStandardMaterial({
+                color: new THREE.Color().setHSL(hue, 0.85, 0.62),
+                emissive: new THREE.Color().setHSL(hue, 0.8, 0.28),
+                emissiveIntensity: 1.1,
+                roughness: 0.45,
+                metalness: 0.06,
+            })
+        );
+        m.position.set(x, y, z);
+        parent.add(m);
+        trippyOrbs.push({
+            mesh: m,
+            base: m.position.clone(),
+            speed: 1.5 + Math.random() * 1.8,
+            amp: 0.07 + Math.random() * 0.16,
+            phase: Math.random() * Math.PI * 2,
+        });
+    }
+    for (let i = 0; i < 8; i++) {
+        makeTrippyOrb(rig303, -4.8 + i * 0.72, 0.62 + (i % 2) * 0.16, 2.15 - (i % 3) * 0.34, (i * 0.07) % 1);
+    }
+    for (let i = 0; i < 6; i++) {
+        makeTrippyOrb(rig909, -3.2 + i * 0.66, 0.58 + (i % 3) * 0.1, 1.7 - (i % 2) * 0.3, (0.35 + i * 0.08) % 1);
+    }
 
     function resize() {
         const w = Math.max(220, mount.clientWidth);
@@ -1421,7 +1641,9 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
 
     let raf = 0;
     let prevStep = 0;
+    let perfTick = 0;
     function frame() {
+        perfTick++;
         const t = performance.now() * 0.001;
         const stepNow = Math.max(0, Math.min(15, Math.floor(state.clock.currentStep.value)));
         const stepEdge = stepNow !== prevStep;
@@ -1551,19 +1773,37 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
         let hottestDelta = 0;
         for (const k of allKnobs) {
             const value01 = Math.min(1, Math.max(0, k.getValue()));
-            k.mesh.rotation.y = -2.35 + value01 * 4.7;
+            if (k.source === "bassline") {
+                k.mesh.rotation.y = -2.7 + value01 * 5.4;
+            } else {
+                k.mesh.rotation.y = -2.1 + value01 * 4.2;
+            }
             const delta = Math.abs(value01 - k.prevValue);
             k.prevValue = value01;
-            if (delta > hottestDelta) {
-                hottestDelta = delta;
+            const weightedDelta = delta * (k.source === "bassline" ? 1.7 : 0.62);
+            if (weightedDelta > hottestDelta) {
+                hottestDelta = weightedDelta;
                 k.mesh.getWorldPosition(tmpKnobWorld);
             }
-            if (delta > 0.0035) k.flashLevel = 1.0;
-            else k.flashLevel *= 0.92;
+            const deltaThreshold = k.source === "bassline" ? 0.0024 : 0.0065;
+            const decay = k.source === "bassline" ? 0.9 : 0.86;
+            const flashGain = k.source === "bassline" ? 1.15 : 0.62;
+            if (delta > deltaThreshold) k.flashLevel = flashGain;
+            else k.flashLevel *= decay;
             const flashMat = k.flash.material as THREE.MeshStandardMaterial;
-            flashMat.emissiveIntensity = 0.15 + k.flashLevel * 2.4;
-            flashMat.opacity = 0.45 + k.flashLevel * 0.45;
-            k.mesh.position.y = k.baseY + k.flashLevel * 0.07;
+            if (k.source === "bassline") {
+                flashMat.color.set(0x8f7dff);
+                flashMat.emissive.set(0x3b1a88);
+                flashMat.emissiveIntensity = 0.24 + k.flashLevel * 3.5;
+                flashMat.opacity = 0.58 + k.flashLevel * 0.5;
+                k.mesh.position.y = k.baseY + k.flashLevel * 0.16;
+            } else {
+                flashMat.color.set(0xff8f5b);
+                flashMat.emissive.set(0x55200b);
+                flashMat.emissiveIntensity = 0.1 + k.flashLevel * 1.35;
+                flashMat.opacity = 0.34 + k.flashLevel * 0.28;
+                k.mesh.position.y = k.baseY + k.flashLevel * 0.038;
+            }
         }
         if (hottestDelta > 0.0015) {
             hotKnobTarget.lerp(tmpKnobWorld, 0.35);
@@ -1599,6 +1839,76 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
             cam.radius = Math.max(3.4, Math.min(7.2, 5.1 - flyPulse + Math.sin(phase * 2.4) * 0.45));
             cam.yaw += 0.02 + hottestDelta * 2.2;
             cam.pitch = Math.max(0.14, Math.min(0.85, 0.22 + flyPulse * 0.2));
+        }
+
+        // Exaggerated cartoon motion pass.
+        const groove = 0.5 + 0.5 * Math.sin(t * 3.2 + state.clock.bpm.value * 0.01);
+        rig303.position.y = rig303BaseY + (0.04 + acidEnergy * 0.1) * Math.sin(t * 2.7);
+        rig909.position.y = rig909BaseY + (0.03 + drumEnergy * 0.08) * Math.sin(t * 2.3 + 1.2);
+        rigMixer.position.y = rigMixerBaseY + 0.02 * Math.sin(t * 1.8 + 0.6);
+        speakersGroup.position.y = speakersBaseY + 0.05 * Math.sin(t * 2.4 + 0.9);
+        rig303.rotation.z = Math.sin(t * 1.9) * 0.022;
+        rig909.rotation.z = Math.sin(t * 2.1 + 0.8) * 0.02;
+        const squish303 = 1 + Math.sin(t * 2.5) * (0.035 + acidEnergy * 0.05);
+        rig303.scale.set(1.12 / squish303, 1.2 * squish303, 1.12 / squish303);
+        const squish909 = 1 + Math.sin(t * 2.1 + 0.8) * (0.03 + drumEnergy * 0.045);
+        rig909.scale.set(1.08 / squish909, 1.14 * squish909, 1.08 / squish909);
+        const squishMix = 1 + Math.sin(t * 1.8 + 1.3) * 0.025;
+        rigMixer.scale.set(1.12, 1.12 * squishMix, 1.08);
+        speakersGroup.rotation.z = Math.sin(t * 1.3 + drumEnergy * 2.0) * 0.045;
+        for (const w of speakerWoofers) {
+            w.scale.setScalar(1 + (drumEnergy * 0.06 + groove * 0.025));
+        }
+        for (const tw of speakerTweeters) {
+            tw.scale.setScalar(1 + acidEnergy * 0.04);
+        }
+        funDeco.rotation.y += 0.002 + acidEnergy * 0.003;
+        funDeco.rotation.x = Math.sin(t * 0.34) * 0.08;
+        if (perfTick % 2 === 0) {
+            for (let i = 0; i < acidHalos.length; i++) {
+                const h = acidHalos[i];
+                h.rotation.z += 0.004 + i * 0.0008 + acidEnergy * 0.003;
+                h.rotation.y += 0.003 + drumEnergy * 0.002;
+                const pulse = 1 + Math.sin(t * (1.0 + i * 0.2) + i) * (0.06 + acidEnergy * 0.08);
+                h.scale.setScalar(pulse);
+                const hm = h.material as THREE.MeshStandardMaterial;
+                hm.emissiveIntensity = 0.55 + acidEnergy * 0.8 + drumEnergy * 0.4;
+                hm.opacity = 0.5 + acidEnergy * 0.2;
+            }
+        }
+        if (trippyHardwareEnabled) {
+            if (perfTick % 2 === 0) {
+                for (let i = 0; i < trippyBindings.length; i++) {
+                    const b = trippyBindings[i];
+                    const wobble = Math.sin(t * b.rate + i * 0.4 + acidEnergy * 2.2 + drumEnergy * 1.2);
+                    b.mat.color.copy(b.baseColor).offsetHSL(wobble * b.shift, 0.06, 0.05);
+                    b.mat.emissive.copy(b.baseEmissive).offsetHSL(wobble * (b.shift * 0.6), 0.08, 0.07);
+                    b.mat.emissiveIntensity = 0.35 + 0.6 * (0.5 + 0.5 * wobble);
+                }
+                for (let i = 0; i < trippyOrbs.length; i++) {
+                    const o = trippyOrbs[i];
+                    const wobble = t * o.speed + o.phase;
+                    o.mesh.position.set(
+                        o.base.x + Math.cos(wobble * 0.8) * o.amp,
+                        o.base.y + Math.sin(wobble) * o.amp * 1.2,
+                        o.base.z + Math.sin(wobble * 0.6) * o.amp
+                    );
+                    o.mesh.rotation.x += 0.01 + acidEnergy * 0.012;
+                    o.mesh.rotation.y += 0.015 + drumEnergy * 0.012;
+                    const m = o.mesh.material as THREE.MeshStandardMaterial;
+                    m.emissiveIntensity = 0.5 + acidEnergy * 0.7 + (Math.sin(wobble * 1.8) * 0.5 + 0.5) * 0.4;
+                }
+            }
+        } else {
+            for (const b of trippyBindings) {
+                b.mat.color.copy(b.baseColor);
+                b.mat.emissive.copy(b.baseEmissive);
+                b.mat.emissiveIntensity = 0.24;
+            }
+            for (const o of trippyOrbs) {
+                o.mesh.position.copy(o.base);
+                (o.mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.35;
+            }
         }
 
         shaderBlend = Math.min(1, shaderBlend + 0.012 + drumEnergy * 0.02 + acidEnergy * 0.012);
