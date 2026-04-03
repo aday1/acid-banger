@@ -876,7 +876,6 @@ button:hover {
     flex-grow: 1;
 }
 
-.meter canvas,
 .acid-meter-canvas {
     object-fit: fill;
     height: 112px;
@@ -906,6 +905,8 @@ button:hover {
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
 }
 
 .acid-meter-toggle {
