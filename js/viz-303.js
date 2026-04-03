@@ -883,6 +883,7 @@ export function Acid303Visual(state, analyser) {
         drumLaneIndicators.push(lamp);
     }
     const drumLaneEnergy = [0, 0, 0, 0];
+    const drumLanePunch = [0, 0, 0, 0];
     const drumKnobs = [];
     const drumKnobPositions = [
         { x: -2.75, z: -1.32 },
@@ -896,7 +897,9 @@ export function Acid303Visual(state, analyser) {
         drumKnobs.push({
             mesh: knob.root,
             flash: knob.flash,
-            getValue: () => drumLaneEnergy[i],
+            getValue: () => Math.min(1, drumLaneEnergy[i] * 0.72 +
+                drumLanePunch[i] * 0.6 +
+                state.mixer.strips[2].level.value * 0.28),
             baseY: knob.root.position.y,
             source: "drums",
             prevValue: 0,
@@ -1502,11 +1505,15 @@ export function Acid303Visual(state, analyser) {
             const hit = Number(arr[drumStep] || 0);
             const muted = ((_a = state.drums.mutes[lane]) === null || _a === void 0 ? void 0 : _a.value) ? 1 : 0;
             const target = muted ? 0 : Math.min(1, hit / 2);
-            drumLaneEnergy[lane] = drumLaneEnergy[lane] * 0.86 + target * 0.14;
+            drumLaneEnergy[lane] = drumLaneEnergy[lane] * 0.72 + target * 0.28;
+            if (!muted && hit > 0)
+                drumLanePunch[lane] = 1;
+            else
+                drumLanePunch[lane] *= 0.82;
             const lampMat = drumLaneIndicators[lane].material;
-            lampMat.color.setRGB(0.3 + drumLaneEnergy[lane] * 0.7, 0.1 + drumLaneEnergy[lane] * 0.2, 0.05);
-            lampMat.emissive.setRGB(0.12 + drumLaneEnergy[lane] * 0.45, 0.04 + drumLaneEnergy[lane] * 0.12, 0.02);
-            lampMat.emissiveIntensity = 0.2 + drumLaneEnergy[lane] * 1.8;
+            lampMat.color.setRGB(0.3 + (drumLaneEnergy[lane] + drumLanePunch[lane] * 0.35) * 0.7, 0.1 + (drumLaneEnergy[lane] + drumLanePunch[lane] * 0.25) * 0.2, 0.05);
+            lampMat.emissive.setRGB(0.12 + (drumLaneEnergy[lane] + drumLanePunch[lane] * 0.4) * 0.45, 0.04 + (drumLaneEnergy[lane] + drumLanePunch[lane] * 0.3) * 0.12, 0.02);
+            lampMat.emissiveIntensity = 0.2 + (drumLaneEnergy[lane] + drumLanePunch[lane] * 0.35) * 1.8;
         }
         for (let i = 0; i < drumLeds.length; i++) {
             const mat = drumLeds[i].material;
@@ -1530,10 +1537,10 @@ export function Acid303Visual(state, analyser) {
         for (const k of allKnobs) {
             const value01 = Math.min(1, Math.max(0, k.getValue()));
             if (k.source === "bassline") {
-                k.mesh.rotation.y = -2.7 + value01 * 5.4;
+                k.mesh.rotation.y = -3.0 + value01 * 6.1;
             }
             else {
-                k.mesh.rotation.y = -2.1 + value01 * 4.2;
+                k.mesh.rotation.y = -2.45 + value01 * 4.9;
             }
             const delta = Math.abs(value01 - k.prevValue);
             k.prevValue = value01;
@@ -1542,31 +1549,37 @@ export function Acid303Visual(state, analyser) {
                 hottestDelta = weightedDelta;
                 k.mesh.getWorldPosition(tmpKnobWorld);
             }
-            const deltaThreshold = k.source === "bassline" ? 0.0024 : 0.0065;
-            const decay = k.source === "bassline" ? 0.9 : 0.86;
-            const flashGain = k.source === "bassline" ? 1.15 : 0.62;
+            const deltaThreshold = k.source === "bassline" ? 0.0019 : 0.004;
+            const decay = k.source === "bassline" ? 0.9 : 0.88;
+            const flashGain = k.source === "bassline" ? 1.2 : 0.9;
             if (delta > deltaThreshold)
                 k.flashLevel = flashGain;
             else
                 k.flashLevel *= decay;
             const flashMat = k.flash.material;
             if (k.source === "bassline") {
-                flashMat.color.set(0x8f7dff);
-                flashMat.emissive.set(0x3b1a88);
-                flashMat.emissiveIntensity = 0.24 + k.flashLevel * 3.5;
+                const h = 0.72 + 0.08 * Math.sin(t * 2.2 + value01 * 6.0);
+                flashMat.color.setHSL(h, 0.9, 0.67);
+                flashMat.emissive.setHSL(h, 0.85, 0.24);
+                flashMat.emissiveIntensity = 0.26 + k.flashLevel * 3.7;
                 flashMat.opacity = 0.58 + k.flashLevel * 0.5;
                 k.mesh.position.y = k.baseY + k.flashLevel * 0.16;
+                k.mesh.rotation.x = Math.sin(t * 10.0 + value01 * 14.0) * k.flashLevel * 0.08;
+                k.mesh.rotation.z = Math.cos(t * 9.5 + value01 * 11.0) * k.flashLevel * 0.06;
             }
             else {
-                flashMat.color.set(0xff8f5b);
-                flashMat.emissive.set(0x55200b);
-                flashMat.emissiveIntensity = 0.1 + k.flashLevel * 1.35;
-                flashMat.opacity = 0.34 + k.flashLevel * 0.28;
-                k.mesh.position.y = k.baseY + k.flashLevel * 0.038;
+                const h = 0.05 + 0.04 * Math.sin(t * 2.0 + value01 * 5.0);
+                flashMat.color.setHSL(h, 0.95, 0.63);
+                flashMat.emissive.setHSL(h, 0.9, 0.2);
+                flashMat.emissiveIntensity = 0.12 + k.flashLevel * 1.8;
+                flashMat.opacity = 0.4 + k.flashLevel * 0.34;
+                k.mesh.position.y = k.baseY + k.flashLevel * 0.075;
+                k.mesh.rotation.x = Math.sin(t * 7.5 + value01 * 9.0) * k.flashLevel * 0.045;
+                k.mesh.rotation.z = Math.cos(t * 6.8 + value01 * 8.0) * k.flashLevel * 0.03;
             }
         }
         if (hottestDelta > 0.0015) {
-            hotKnobTarget.lerp(tmpKnobWorld, 0.35);
+            hotKnobTarget.lerp(tmpKnobWorld, 0.48);
         }
         else {
             hotKnobTarget.lerp(restTarget, 0.02);
@@ -1600,13 +1613,14 @@ export function Acid303Visual(state, analyser) {
             cam.yaw += 0.02 + hottestDelta * 2.2;
             cam.pitch = Math.max(0.14, Math.min(0.85, 0.22 + flyPulse * 0.2));
         }
+        const acidCrazy = 0.35 + acidEnergy * 0.65 + Math.min(0.5, hottestDelta * 2.0);
         // Exaggerated cartoon motion pass.
         const groove = 0.5 + 0.5 * Math.sin(t * 3.2 + state.clock.bpm.value * 0.01);
-        rig303.position.y = rig303BaseY + (0.04 + acidEnergy * 0.1) * Math.sin(t * 2.7);
-        rig909.position.y = rig909BaseY + (0.03 + drumEnergy * 0.08) * Math.sin(t * 2.3 + 1.2);
+        rig303.position.y = rig303BaseY + (0.05 + acidCrazy * 0.14) * Math.sin(t * 2.9);
+        rig909.position.y = rig909BaseY + (0.035 + drumEnergy * 0.1) * Math.sin(t * 2.5 + 1.2);
         rigMixer.position.y = rigMixerBaseY + 0.02 * Math.sin(t * 1.8 + 0.6);
         speakersGroup.position.y = speakersBaseY + 0.05 * Math.sin(t * 2.4 + 0.9);
-        rig303.rotation.z = Math.sin(t * 1.9) * 0.022;
+        rig303.rotation.z = Math.sin(t * 2.2) * (0.03 + acidCrazy * 0.03);
         rig909.rotation.z = Math.sin(t * 2.1 + 0.8) * 0.02;
         const squish303 = 1 + Math.sin(t * 2.5) * (0.035 + acidEnergy * 0.05);
         rig303.scale.set(1.12 / squish303, 1.2 * squish303, 1.12 / squish303);
