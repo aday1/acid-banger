@@ -18,6 +18,7 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "gifenc": "^1.0.3",
     "lamejs": "^1.2.1",
     "three": "^0.183.2"
   }

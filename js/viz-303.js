@@ -9,6 +9,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import * as THREE from "three";
 import lamejs from "lamejs";
+import { OBJExporter } from "three/examples/jsm/exporters/OBJExporter.js";
+import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
+import { GIFEncoder, quantize, applyPalette } from "gifenc";
 function norm(p) {
     const [lo, hi] = p.bounds;
     const span = hi - lo;
@@ -196,11 +199,11 @@ export function Acid303Visual(state, analyser) {
     wrap.classList.add("viz303-panel");
     const title = document.createElement("div");
     title.classList.add("sync-panel-title");
-    title.innerText = "303 + 909 Visual";
+    title.innerText = "Generic Hardware Visual";
     const hint = document.createElement("div");
     hint.classList.add("sync-hint");
     hint.innerText =
-        "Drag to orbit, mouse wheel to zoom. Use mixer rows to toggle rigs, move X/Z, and adjust yaw. VJ shader cycles and patch cables react to scene movement.";
+        "Drag to orbit, mouse wheel to zoom farther out. Use mixer rows to toggle rigs, move X/Z, and adjust yaw. Wall and floor shaders cycle after a few bars.";
     const mount = document.createElement("div");
     mount.classList.add("viz303-canvas-wrap");
     const actions = document.createElement("div");
@@ -257,7 +260,7 @@ export function Acid303Visual(state, analyser) {
     const vjMotionBtn = document.createElement("button");
     vjMotionBtn.type = "button";
     vjMotionBtn.classList.add("viz303-rec-btn");
-    vjMotionBtn.textContent = "VJ walls motion: on";
+    vjMotionBtn.textContent = "VJ walls motion: disabled";
     const trippyHwBtn = document.createElement("button");
     trippyHwBtn.type = "button";
     trippyHwBtn.classList.add("viz303-rec-btn");
@@ -266,6 +269,18 @@ export function Acid303Visual(state, analyser) {
     fullscreenBtn.type = "button";
     fullscreenBtn.classList.add("viz303-rec-btn");
     fullscreenBtn.textContent = "Fullscreen";
+    const exportObjBtn = document.createElement("button");
+    exportObjBtn.type = "button";
+    exportObjBtn.classList.add("viz303-rec-btn");
+    exportObjBtn.textContent = "Export OBJ";
+    const exportBlenderBtn = document.createElement("button");
+    exportBlenderBtn.type = "button";
+    exportBlenderBtn.classList.add("viz303-rec-btn");
+    exportBlenderBtn.textContent = "Export Blender(GLB)";
+    const exportGifBtn = document.createElement("button");
+    exportGifBtn.type = "button";
+    exportGifBtn.classList.add("viz303-rec-btn");
+    exportGifBtn.textContent = "Export GIF";
     const sizeSlider = document.createElement("input");
     sizeSlider.type = "range";
     sizeSlider.min = "220";
@@ -273,7 +288,65 @@ export function Acid303Visual(state, analyser) {
     sizeSlider.value = "320";
     sizeSlider.classList.add("viz303-orbit-speed");
     sizeSlider.title = "Visual height";
-    actions.append(recBtn, orbitToggle, orbitSpeed, camMode, trackRecBtn, vjToggle, shaderCycleBtn, vjMotionBtn, trippyHwBtn, fullscreenBtn, sizeSlider, resetCam, recStatus);
+    const flySpeed = document.createElement("input");
+    flySpeed.type = "range";
+    flySpeed.min = "2";
+    flySpeed.max = "100";
+    flySpeed.value = "44";
+    flySpeed.classList.add("viz303-orbit-speed");
+    flySpeed.title = "Flythrough speed";
+    const flySmooth = document.createElement("input");
+    flySmooth.type = "range";
+    flySmooth.min = "1";
+    flySmooth.max = "100";
+    flySmooth.value = "26";
+    flySmooth.classList.add("viz303-orbit-speed");
+    flySmooth.title = "Fly camera smoothing";
+    const fxSize = document.createElement("input");
+    fxSize.type = "range";
+    fxSize.min = "60";
+    fxSize.max = "260";
+    fxSize.value = "145";
+    fxSize.classList.add("viz303-orbit-speed");
+    fxSize.title = "Acid geometry size";
+    const flyFocus = document.createElement("input");
+    flyFocus.type = "range";
+    flyFocus.min = "0";
+    flyFocus.max = "100";
+    flyFocus.value = "18";
+    flyFocus.classList.add("viz303-orbit-speed");
+    flyFocus.title = "Fly focus pull";
+    const fxSpread = document.createElement("input");
+    fxSpread.type = "range";
+    fxSpread.min = "60";
+    fxSpread.max = "260";
+    fxSpread.value = "160";
+    fxSpread.classList.add("viz303-orbit-speed");
+    fxSpread.title = "Acid geometry spread";
+    const fxRoam = document.createElement("input");
+    fxRoam.type = "range";
+    fxRoam.min = "10";
+    fxRoam.max = "220";
+    fxRoam.value = "95";
+    fxRoam.classList.add("viz303-orbit-speed");
+    fxRoam.title = "Acid geometry roam speed";
+    const fxHit = document.createElement("input");
+    fxHit.type = "range";
+    fxHit.min = "0";
+    fxHit.max = "180";
+    fxHit.value = "70";
+    fxHit.classList.add("viz303-orbit-speed");
+    fxHit.title = "Acid geometry hit bounce";
+    function sliderWrap(label, input) {
+        const row = document.createElement("label");
+        row.classList.add("viz303-slider-wrap");
+        const text = document.createElement("span");
+        text.classList.add("viz303-slider-label");
+        text.textContent = label;
+        row.append(text, input);
+        return row;
+    }
+    actions.append(recBtn, orbitToggle, sliderWrap("Orbit", orbitSpeed), camMode, trackRecBtn, sliderWrap("Fly speed", flySpeed), sliderWrap("Fly smooth", flySmooth), sliderWrap("Fly focus", flyFocus), sliderWrap("FX size", fxSize), sliderWrap("FX spread", fxSpread), sliderWrap("FX roam", fxRoam), sliderWrap("FX hit", fxHit), vjToggle, shaderCycleBtn, vjMotionBtn, trippyHwBtn, exportObjBtn, exportBlenderBtn, exportGifBtn, fullscreenBtn, sliderWrap("Height", sizeSlider), resetCam, recStatus);
     const visualMixer = document.createElement("div");
     visualMixer.classList.add("viz303-mixer");
     wrap.append(title, hint, actions, visualMixer, mount);
@@ -293,6 +366,20 @@ export function Acid303Visual(state, analyser) {
     let mp3Encoder = null;
     let mp3Chunks = [];
     let mp3Leftover = new Int16Array(0);
+    let gifExporting = false;
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.append(a);
+        a.click();
+        a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+    function downloadText(text, filename, mime = "text/plain;charset=utf-8") {
+        downloadBlob(new Blob([text], { type: mime }), filename);
+    }
     function recordingMimeType() {
         const candidates = [
             "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
@@ -443,6 +530,88 @@ export function Acid303Visual(state, analyser) {
         else
             startRecording();
     });
+    exportObjBtn.addEventListener("click", () => {
+        try {
+            const exporter = new OBJExporter();
+            const objText = exporter.parse(scene);
+            downloadText(objText, "acid-banger-visual.obj", "text/plain;charset=utf-8");
+            recStatus.textContent = "saved OBJ";
+        }
+        catch (_a) {
+            recStatus.textContent = "OBJ export failed";
+        }
+    });
+    exportBlenderBtn.addEventListener("click", () => {
+        try {
+            const exporter = new GLTFExporter();
+            exporter.parse(scene, (result) => {
+                if (result instanceof ArrayBuffer) {
+                    downloadBlob(new Blob([result], { type: "model/gltf-binary" }), "acid-banger-visual.glb");
+                    recStatus.textContent = "saved GLB (Blender)";
+                }
+                else {
+                    const json = JSON.stringify(result);
+                    downloadText(json, "acid-banger-visual.gltf", "model/gltf+json");
+                    recStatus.textContent = "saved glTF";
+                }
+            }, (err) => {
+                recStatus.textContent = "GLB export failed";
+                console.error(err);
+            }, { binary: true, onlyVisible: true });
+        }
+        catch (_a) {
+            recStatus.textContent = "GLB export failed";
+        }
+    });
+    exportGifBtn.addEventListener("click", () => __awaiter(this, void 0, void 0, function* () {
+        if (gifExporting)
+            return;
+        gifExporting = true;
+        exportGifBtn.disabled = true;
+        const oldText = exportGifBtn.textContent;
+        exportGifBtn.textContent = "Exporting GIF...";
+        recStatus.textContent = "capturing GIF...";
+        try {
+            const src = renderer.domElement;
+            const srcW = Math.max(160, src.width);
+            const srcH = Math.max(120, src.height);
+            const maxW = 560;
+            const scale = Math.min(1, maxW / srcW);
+            const w = Math.max(160, Math.floor(srcW * scale));
+            const h = Math.max(120, Math.floor(srcH * scale));
+            const sample = document.createElement("canvas");
+            sample.width = w;
+            sample.height = h;
+            const sg = sample.getContext("2d", { willReadFrequently: true });
+            const fps = 12;
+            const frameCount = 48;
+            const gif = GIFEncoder();
+            const delay = Math.max(2, Math.round(100 / fps));
+            for (let i = 0; i < frameCount; i++) {
+                yield new Promise((resolve) => {
+                    window.requestAnimationFrame(() => resolve());
+                });
+                sg.drawImage(src, 0, 0, w, h);
+                const rgba = sg.getImageData(0, 0, w, h).data;
+                const palette = quantize(rgba, 256);
+                const indexed = applyPalette(rgba, palette);
+                gif.writeFrame(indexed, w, h, { palette, delay });
+            }
+            gif.finish();
+            const gifBytes = gif.bytes();
+            downloadBlob(new Blob([gifBytes], { type: "image/gif" }), "acid-banger-visual.gif");
+            recStatus.textContent = "saved GIF";
+        }
+        catch (err) {
+            recStatus.textContent = "GIF export failed";
+            console.error(err);
+        }
+        finally {
+            gifExporting = false;
+            exportGifBtn.disabled = false;
+            exportGifBtn.textContent = oldText || "Export GIF";
+        }
+    }));
     camMode.addEventListener("change", () => {
         const v = camMode.value;
         cameraMode = v;
@@ -459,11 +628,48 @@ export function Acid303Visual(state, analyser) {
         const t = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) / 100 : 0.2;
         cam.autoOrbitSpeed = t * 0.004;
     });
+    flySpeed.addEventListener("input", () => {
+        const v = parseInt(flySpeed.value, 10);
+        const t = Number.isFinite(v) ? Math.max(2, Math.min(100, v)) / 100 : 0.2;
+        // Lower cap keeps flythrough from becoming disorienting.
+        flyPathRate = 0.002 + t * 0.045;
+    });
+    flySmooth.addEventListener("input", () => {
+        const v = parseInt(flySmooth.value, 10);
+        const t = Number.isFinite(v) ? Math.max(1, Math.min(100, v)) / 100 : 0.26;
+        // Lower value = smoother/slower camera response.
+        flyCamSmoothing = 0.02 + t * 0.16;
+    });
+    flyFocus.addEventListener("input", () => {
+        const v = parseInt(flyFocus.value, 10);
+        const t = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) / 100 : 0.18;
+        flyFocusPull = t;
+    });
+    fxSize.addEventListener("input", () => {
+        const v = parseInt(fxSize.value, 10);
+        const t = Number.isFinite(v) ? Math.max(60, Math.min(260, v)) / 100 : 1.45;
+        acidFxSize = t;
+    });
+    fxSpread.addEventListener("input", () => {
+        const v = parseInt(fxSpread.value, 10);
+        const t = Number.isFinite(v) ? Math.max(60, Math.min(260, v)) / 100 : 1.6;
+        acidFxSpread = t;
+    });
+    fxRoam.addEventListener("input", () => {
+        const v = parseInt(fxRoam.value, 10);
+        const t = Number.isFinite(v) ? Math.max(10, Math.min(220, v)) / 100 : 0.95;
+        acidFxRoamSpeed = t;
+    });
+    fxHit.addEventListener("input", () => {
+        const v = parseInt(fxHit.value, 10);
+        const t = Number.isFinite(v) ? Math.max(0, Math.min(180, v)) / 100 : 0.7;
+        acidFxHit = t;
+    });
     resetCam.addEventListener("click", () => {
         cam.yaw = 0.18;
         cam.pitch = 0.34;
-        cam.radius = 12.2;
-        target.set(-1.1, 0.35, 0);
+        cam.radius = 16.5;
+        target.set(-1.5, 0.5, -1.4);
     });
     sizeSlider.addEventListener("input", () => {
         const px = parseInt(sizeSlider.value, 10);
@@ -493,16 +699,20 @@ export function Acid303Visual(state, analyser) {
         vjToggle.textContent = `VJ FX: ${vjGroup.visible ? "on" : "off"}`;
     });
     let shaderCycleEnabled = true;
-    let vjMotionEnabled = true;
+    let vjMotionEnabled = false;
     let trippyHardwareEnabled = true;
+    let flyPathRate = 0.02;
+    let flyCamSmoothing = 0.055;
+    let flyFocusPull = 0.18;
+    let acidFxSize = 1.45;
+    let acidFxSpread = 1.6;
+    let acidFxRoamSpeed = 0.95;
+    let acidFxHit = 0.7;
     shaderCycleBtn.addEventListener("click", () => {
         shaderCycleEnabled = !shaderCycleEnabled;
         shaderCycleBtn.textContent = `Shader cycle: ${shaderCycleEnabled ? "on" : "off"}`;
     });
-    vjMotionBtn.addEventListener("click", () => {
-        vjMotionEnabled = !vjMotionEnabled;
-        vjMotionBtn.textContent = `VJ walls motion: ${vjMotionEnabled ? "on" : "off"}`;
-    });
+    vjMotionBtn.disabled = true;
     trippyHwBtn.addEventListener("click", () => {
         trippyHardwareEnabled = !trippyHardwareEnabled;
         trippyHwBtn.textContent = `Trippy hardware: ${trippyHardwareEnabled ? "on" : "off"}`;
@@ -546,6 +756,7 @@ export function Acid303Visual(state, analyser) {
         uModeB: { value: 1 },
         uBlend: { value: 0 },
         uGlitch: { value: 0 },
+        uChaos: { value: 0 },
     };
     const vjMat = new THREE.ShaderMaterial({
         uniforms: vjUniforms,
@@ -569,6 +780,7 @@ export function Acid303Visual(state, analyser) {
             uniform float uModeB;
             uniform float uBlend;
             uniform float uGlitch;
+            uniform float uChaos;
             vec3 modeCol(float mode, vec2 uv, float bpmPhase, float ring, float stripes, float acidWarp, float drumPunch) {
                 if (mode < 0.5) {
                     return vec3(
@@ -650,6 +862,36 @@ export function Acid303Visual(state, analyser) {
                         0.11 + ring * 0.38 + drumPunch * 0.41,
                         0.28 + pulse * 0.49
                     );
+                } else if (mode < 11.5) {
+                    float kaleido = abs(sin(atan(uv.y, uv.x) * 8.0 + bpmPhase * 3.0));
+                    float burst = sin(length(uv) * 80.0 - bpmPhase * 18.0 + uChaos * 9.0) * 0.5 + 0.5;
+                    return vec3(
+                        0.18 + kaleido * 0.62,
+                        0.08 + burst * 0.48 + drumPunch * 0.24,
+                        0.2 + ring * 0.42
+                    );
+                } else if (mode < 12.5) {
+                    float ripple = sin((uv.x + sin(uv.y * 8.0 + bpmPhase)) * 42.0 + bpmPhase * 11.0) * 0.5 + 0.5;
+                    return vec3(
+                        0.1 + ripple * 0.68,
+                        0.16 + acidWarp * 0.5,
+                        0.24 + stripes * 0.4 + uChaos * 0.2
+                    );
+                } else if (mode < 13.5) {
+                    float checker = step(0.0, sin(uv.x * 34.0 + bpmPhase * 5.0) * sin(uv.y * 34.0 - bpmPhase * 6.0));
+                    float softness = sin((uv.x * 4.0 + uv.y * 5.0 + bpmPhase) * 5.0) * 0.5 + 0.5;
+                    return vec3(
+                        0.12 + checker * 0.55,
+                        0.08 + softness * 0.45 + drumPunch * 0.2,
+                        0.28 + acidWarp * 0.46
+                    );
+                } else if (mode < 14.5) {
+                    float helix = sin((uv.x * 2.2 - uv.y * 2.2) * 18.0 + bpmPhase * 10.0 + uChaos * 14.0) * 0.5 + 0.5;
+                    return vec3(
+                        0.2 + helix * 0.58,
+                        0.09 + ring * 0.32 + drumPunch * 0.3,
+                        0.18 + helix * 0.4 + stripes * 0.3
+                    );
                 }
                 float smoke = sin((uv.x * 8.0 + uv.y * 10.0 + sin(bpmPhase)) * 6.0 + bpmPhase * 4.2 + uAcid * 8.0) * 0.5 + 0.5;
                 return vec3(
@@ -671,6 +913,8 @@ export function Acid303Visual(state, analyser) {
                 vec3 col = mix(colA, colB, smoothstep(0.0, 1.0, uBlend));
                 float crackle = (sin((uv.x * 180.0 + bpmPhase * 30.0)) * sin((uv.y * 160.0 - bpmPhase * 24.0))) * 0.5 + 0.5;
                 col += vec3(0.18, 0.06, 0.22) * crackle * uGlitch * 0.28;
+                float haze = sin((uv.x * 6.0 + uv.y * 7.0 + bpmPhase) * (3.2 + uChaos * 2.0)) * 0.5 + 0.5;
+                col += vec3(0.08, 0.03, 0.12) * haze * (0.22 + uChaos * 0.35);
                 float alpha = 0.16 + 0.35 * (ring * 0.45 + stripes * 0.55) + drumPunch * 0.3 + uGlitch * 0.09;
                 gl_FragColor = vec4(col, alpha);
             }
@@ -678,27 +922,27 @@ export function Acid303Visual(state, analyser) {
     });
     const vjGroup = new THREE.Group();
     scene.add(vjGroup);
-    const vjScreen = new THREE.Mesh(new THREE.PlaneGeometry(34, 13), vjMat);
-    vjScreen.position.set(0, 5.6, -10);
+    const vjScreen = new THREE.Mesh(new THREE.PlaneGeometry(31.5, 12), vjMat);
+    vjScreen.position.set(0, 5.6, -10.6);
     vjGroup.add(vjScreen);
-    const vjBack = new THREE.Mesh(new THREE.PlaneGeometry(34, 13), vjMat);
-    vjBack.position.set(0, 5.6, 10);
+    const vjBack = new THREE.Mesh(new THREE.PlaneGeometry(31.5, 12), vjMat);
+    vjBack.position.set(0, 5.6, 10.6);
     vjBack.rotation.y = Math.PI;
     vjGroup.add(vjBack);
-    const vjLeft = new THREE.Mesh(new THREE.PlaneGeometry(20, 9), vjMat);
-    vjLeft.position.set(-13, 4.2, 0);
+    const vjLeft = new THREE.Mesh(new THREE.PlaneGeometry(18, 8.5), vjMat);
+    vjLeft.position.set(-13.8, 4.2, 0);
     vjLeft.rotation.y = Math.PI / 2;
     vjGroup.add(vjLeft);
-    const vjRight = new THREE.Mesh(new THREE.PlaneGeometry(20, 9), vjMat);
-    vjRight.position.set(13, 4.2, 0);
+    const vjRight = new THREE.Mesh(new THREE.PlaneGeometry(18, 8.5), vjMat);
+    vjRight.position.set(13.8, 4.2, 0);
     vjRight.rotation.y = -Math.PI / 2;
     vjGroup.add(vjRight);
-    const vjCeiling = new THREE.Mesh(new THREE.PlaneGeometry(24, 24), vjMat);
-    vjCeiling.position.set(0, 10.5, 0);
+    const vjCeiling = new THREE.Mesh(new THREE.PlaneGeometry(22, 22), vjMat);
+    vjCeiling.position.set(0, 10.8, 0);
     vjCeiling.rotation.x = Math.PI / 2;
     vjGroup.add(vjCeiling);
     const rig303 = new THREE.Group();
-    rig303.position.set(3.5, 0, 0.1);
+    rig303.position.set(6.3, 0, 1.2);
     rig303.rotation.y = -0.15;
     const rig303BaseY = rig303.position.y;
     rig303.scale.set(1.12, 1.2, 1.12);
@@ -824,7 +1068,7 @@ export function Acid303Visual(state, analyser) {
         rig.add(screw);
     }
     const rig909 = new THREE.Group();
-    rig909.position.set(-6.8, -0.02, -0.4);
+    rig909.position.set(-9.2, -0.02, 0.5);
     rig909.rotation.y = 0.22;
     const rig909BaseY = rig909.position.y;
     rig909.scale.set(1.08, 1.14, 1.08);
@@ -907,7 +1151,7 @@ export function Acid303Visual(state, analyser) {
         });
     }
     const rigMixer = new THREE.Group();
-    rigMixer.position.set(-1.7, -0.04, -4.3);
+    rigMixer.position.set(-1.5, -0.04, -6.8);
     rigMixer.rotation.y = 0.08;
     const rigMixerBaseY = rigMixer.position.y;
     rigMixer.scale.set(1.12, 1.12, 1.08);
@@ -950,7 +1194,7 @@ export function Acid303Visual(state, analyser) {
     mixerSideR.position.x = 2.9;
     rigMixer.add(mixerSideR);
     const speakersGroup = new THREE.Group();
-    speakersGroup.position.set(0.2, 0, -8.6);
+    speakersGroup.position.set(0.2, 0, -12.4);
     const speakersBaseY = speakersGroup.position.y;
     speakersGroup.scale.set(1.14, 1.14, 1.1);
     scene.add(speakersGroup);
@@ -999,6 +1243,7 @@ export function Acid303Visual(state, analyser) {
     const patchCables = [];
     const tmpA = new THREE.Vector3();
     const tmpB = new THREE.Vector3();
+    let cablePulse = 0;
     function makePatchCable(a, b, lift, color = 0xffaa4d) {
         const mat = wireMat.clone();
         mat.color.set(color);
@@ -1018,8 +1263,8 @@ export function Acid303Visual(state, analyser) {
         const mid = tmpA.clone().add(tmpB).multiplyScalar(0.5);
         const bendA = tmpA.clone().lerp(mid, 0.35);
         const bendB = tmpA.clone().lerp(mid, 0.7);
-        bendA.y += c.lift;
-        bendB.y += c.lift * 0.85;
+        bendA.y += c.lift + cablePulse * 0.28;
+        bendB.y += c.lift * 0.85 + cablePulse * 0.22;
         const pos = c.line.geometry.getAttribute("position");
         pos.setXYZ(0, tmpA.x, tmpA.y, tmpA.z);
         pos.setXYZ(1, bendA.x, bendA.y, bendA.z);
@@ -1092,13 +1337,13 @@ export function Acid303Visual(state, analyser) {
         }
         visualMixer.append(row);
     }
-    rigControlRow("303", rig303, {
+    rigControlRow("Hardware A", rig303, {
         x: rig303.position.x,
         z: rig303.position.z,
         yaw: rig303.rotation.y,
         pitch: rig303.rotation.x,
     });
-    rigControlRow("909", rig909, {
+    rigControlRow("Hardware B", rig909, {
         x: rig909.position.x,
         z: rig909.position.z,
         yaw: rig909.rotation.y,
@@ -1126,12 +1371,13 @@ export function Acid303Visual(state, analyser) {
     vjMotionRow.classList.add("viz303-mixer-row");
     const vjMotionChk = document.createElement("input");
     vjMotionChk.type = "checkbox";
-    vjMotionChk.checked = true;
+    vjMotionChk.checked = false;
+    vjMotionChk.disabled = true;
     vjMotionChk.addEventListener("change", () => {
         vjMotionEnabled = vjMotionChk.checked;
-        vjMotionBtn.textContent = `VJ walls motion: ${vjMotionEnabled ? "on" : "off"}`;
+        vjMotionBtn.textContent = "VJ walls motion: disabled";
     });
-    vjMotionRow.append(vjMotionChk, document.createTextNode(" Animate VJ walls"));
+    vjMotionRow.append(vjMotionChk, document.createTextNode(" Animate VJ walls (disabled)"));
     visualMixer.append(vjMotionRow);
     const wireRow = document.createElement("div");
     wireRow.classList.add("viz303-mixer-row");
@@ -1143,16 +1389,92 @@ export function Acid303Visual(state, analyser) {
     });
     wireRow.append(wireChk, document.createTextNode(" Show patch cables"));
     visualMixer.append(wireRow);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), new THREE.MeshStandardMaterial({
-        color: 0x0d1018,
-        roughness: 0.96,
-        metalness: 0.02,
-    }));
+    const floorUniforms = {
+        uTime: { value: 0 },
+        uBpm: { value: state.clock.bpm.value },
+        uAcid: { value: 0 },
+        uDrums: { value: 0 },
+        uMode: { value: 0 },
+        uModeB: { value: 1 },
+        uBlend: { value: 0 },
+        uChaos: { value: 0 },
+    };
+    const floorMat = new THREE.ShaderMaterial({
+        uniforms: floorUniforms,
+        transparent: false,
+        side: THREE.DoubleSide,
+        vertexShader: `
+            varying vec2 vUv;
+            void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `,
+        fragmentShader: `
+            varying vec2 vUv;
+            uniform float uTime;
+            uniform float uBpm;
+            uniform float uAcid;
+            uniform float uDrums;
+            uniform float uMode;
+            uniform float uModeB;
+            uniform float uBlend;
+            uniform float uChaos;
+            vec3 floorMode(float mode, vec2 uv, float bpmPhase, float acid, float drums, float chaos) {
+                float r = length(uv);
+                float a = atan(uv.y, uv.x);
+                float grid = abs(fract((uv.x + 1.0) * 12.0) - 0.5) + abs(fract((uv.y + 1.0) * 12.0) - 0.5);
+                float rings = sin(r * (36.0 + chaos * 26.0) - bpmPhase * (9.0 + chaos * 6.0)) * 0.5 + 0.5;
+                float stripes = sin((uv.x * 22.0 + uv.y * 8.0) + bpmPhase * 6.0) * 0.5 + 0.5;
+                float swirl = sin(a * (7.0 + chaos * 4.0) + r * 20.0 - bpmPhase * 5.0) * 0.5 + 0.5;
+                if (mode < 1.5) {
+                    return vec3(0.03 + rings * 0.42, 0.02 + swirl * 0.16, 0.09 + stripes * 0.5);
+                } else if (mode < 2.5) {
+                    float checker = mod(floor((uv.x + 1.0) * 18.0) + floor((uv.y + 1.0) * 18.0), 2.0);
+                    return vec3(0.06 + checker * 0.36, 0.03 + stripes * 0.18, 0.08 + rings * 0.48);
+                } else if (mode < 3.5) {
+                    float laser = sin((uv.x * uv.y) * 90.0 + bpmPhase * 12.0 + chaos * 9.0) * 0.5 + 0.5;
+                    return vec3(0.04 + laser * 0.56, 0.02 + swirl * 0.14, 0.09 + rings * 0.52);
+                } else if (mode < 4.5) {
+                    float tunnel = sin((r * 44.0 - bpmPhase * 18.0) + cos(a * 9.0) * 4.0) * 0.5 + 0.5;
+                    return vec3(0.05 + tunnel * 0.52, 0.02 + grid * 0.06, 0.12 + swirl * 0.44);
+                } else if (mode < 5.5) {
+                    float plasma = sin((uv.x + sin(uv.y * 6.0 + bpmPhase)) * 34.0 + bpmPhase * 10.0) * 0.5 + 0.5;
+                    return vec3(0.04 + plasma * 0.5, 0.03 + rings * 0.2, 0.1 + stripes * 0.46);
+                } else if (mode < 6.5) {
+                    float spiral = sin(a * 16.0 + bpmPhase * 6.0 + r * 24.0) * 0.5 + 0.5;
+                    float lava = sin((uv.x - uv.y) * 28.0 + bpmPhase * 8.0 + chaos * 7.0) * 0.5 + 0.5;
+                    return vec3(0.03 + spiral * 0.48, 0.04 + rings * 0.2, 0.1 + lava * 0.44);
+                } else {
+                    float noiseish = sin((uv.x * 130.0 + bpmPhase * 17.0) * sin(uv.y * 11.0 + chaos * 4.0)) * 0.5 + 0.5;
+                    return vec3(0.05 + noiseish * 0.5, 0.02 + swirl * 0.18, 0.08 + rings * 0.46);
+                }
+            }
+            void main() {
+                vec2 uv = vUv * 2.0 - 1.0;
+                float bpmPhase = uTime * (uBpm / 60.0);
+                float acid = smoothstep(0.0, 1.0, uAcid);
+                float drums = smoothstep(0.0, 1.0, uDrums);
+                float chaos = clamp(uChaos, 0.0, 1.4);
+                vec2 uvA = uv + vec2(sin(uv.y * 10.0 + bpmPhase * 1.8), cos(uv.x * 12.0 - bpmPhase * 1.4)) * (0.04 + acid * 0.06);
+                vec2 uvB = uv + vec2(cos(uv.y * 8.0 - bpmPhase * 1.5), sin(uv.x * 7.0 + bpmPhase * 1.7)) * (0.03 + drums * 0.08);
+                vec3 colA = floorMode(uMode, uvA, bpmPhase, acid, drums, chaos);
+                vec3 colB = floorMode(uModeB, uvB, bpmPhase * 1.05, acid, drums, chaos);
+                vec3 col = mix(colA, colB, smoothstep(0.0, 1.0, uBlend));
+                float pulse = sin((uv.x + uv.y) * 8.0 + bpmPhase * 5.0) * 0.5 + 0.5;
+                col += vec3(0.1, 0.03, 0.12) * pulse * (0.15 + acid * 0.4);
+                col *= 0.82 + drums * 0.28;
+                gl_FragColor = vec4(col, 1.0);
+            }
+        `,
+    });
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.55;
     scene.add(floor);
     const funDeco = new THREE.Group();
     scene.add(funDeco);
+    const decoMovers = [];
     for (let i = 0; i < 24; i++) {
         const orb = new THREE.Mesh(new THREE.SphereGeometry(0.16 + (i % 3) * 0.04, 8, 6), new THREE.MeshStandardMaterial({
             color: new THREE.Color().setHSL((i * 0.13) % 1, 0.8, 0.62),
@@ -1161,12 +1483,23 @@ export function Acid303Visual(state, analyser) {
             roughness: 0.5,
             metalness: 0.08,
         }));
-        orb.position.set(-11 + (i % 8) * 3.0 + ((i / 8) | 0) * 0.22, 0.08 + ((i / 8) | 0) * 0.1, -10 + ((i / 8) | 0) * 3.1 + (i % 2 ? 0.65 : -0.3));
+        const baseY = 0.08 + Math.random() * 0.7;
+        orb.position.set((Math.random() * 2 - 1) * 10.5, baseY, (Math.random() * 2 - 1) * 9.5);
+        const dir = new THREE.Vector3(Math.random() * 2 - 1, 0, Math.random() * 2 - 1).normalize();
+        const speed = 0.22 + Math.random() * 0.45;
+        decoMovers.push({
+            mesh: orb,
+            baseY,
+            vel: dir.multiplyScalar(speed),
+            phase: Math.random() * Math.PI * 2,
+            spin: new THREE.Vector3((Math.random() * 2 - 1) * 0.014, (Math.random() * 2 - 1) * 0.016, (Math.random() * 2 - 1) * 0.012),
+        });
         funDeco.add(orb);
     }
     const acidHaloGroup = new THREE.Group();
     scene.add(acidHaloGroup);
     const acidHalos = [];
+    const acidHaloMeta = [];
     function addHalo(r, y, z, col) {
         const halo = new THREE.Mesh(new THREE.TorusGeometry(r, 0.1, 8, 24), new THREE.MeshStandardMaterial({
             color: col,
@@ -1181,6 +1514,13 @@ export function Acid303Visual(state, analyser) {
         halo.position.set(0, y, z);
         acidHaloGroup.add(halo);
         acidHalos.push(halo);
+        acidHaloMeta.push({
+            baseY: y,
+            baseR: Math.max(0.6, r * 0.68),
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.45 + Math.random() * 0.65,
+            wobble: 0.75 + Math.random() * 1.4,
+        });
     }
     addHalo(3.1, 1.2, 0.4, 0xff7dd8);
     addHalo(4.25, 1.7, -2.3, 0x7cd4ff);
@@ -1338,35 +1678,55 @@ export function Acid303Visual(state, analyser) {
     const cam = {
         yaw: 0.18,
         pitch: 0.34,
-        radius: 12.2,
+        radius: 16.5,
         autoOrbitEnabled: true,
         autoOrbitSpeed: 0.0008,
         drag: false,
         lastX: 0,
         lastY: 0,
     };
-    const target = new THREE.Vector3(-1.1, 0.35, 0);
+    const target = new THREE.Vector3(-1.5, 0.5, -1.4);
     let cameraMode = "orbit";
     let trackRecording = false;
     let trackPlaying = false;
     let trackStartMs = 0;
     let trackDuration = 0;
     const cameraTrack = [];
-    const hotKnobTarget = new THREE.Vector3(-1.1, 0.35, 0);
-    const restTarget = new THREE.Vector3(-1.1, 0.35, 0);
+    const hotKnobTarget = new THREE.Vector3(-1.5, 0.5, -1.4);
+    const restTarget = new THREE.Vector3(-1.5, 0.5, -1.4);
     const tmpKnobWorld = new THREE.Vector3();
     let flyPulse = 0;
     let shaderMode = 0;
     let shaderModeNext = 1;
     let shaderBlend = 0;
     let shaderBarsUntilSwitch = 2;
+    let floorShaderMode = 0;
+    let floorShaderModeNext = 1;
+    let floorShaderBlend = 0;
+    let floorShaderBarsUntilSwitch = 3;
     let glitchPulse = 0;
     let downbeatBars = 0;
     const cutPasses = [
-        { t: 0, yaw: -0.6, pitch: 0.42, radius: 12.8, tx: -0.8, ty: 0.3, tz: 0.0 },
-        { t: 0, yaw: 0.1, pitch: 0.28, radius: 10.6, tx: 3.3, ty: 0.25, tz: 0.0 },
-        { t: 0, yaw: 0.9, pitch: 0.34, radius: 10.9, tx: -6.7, ty: 0.25, tz: -0.3 },
-        { t: 0, yaw: 1.5, pitch: 0.5, radius: 13.4, tx: -1.2, ty: 0.45, tz: -0.2 },
+        { t: 0, yaw: -0.72, pitch: 0.44, radius: 20.4, tx: -1.4, ty: 0.6, tz: -1.8 },
+        { t: 0, yaw: 0.28, pitch: 0.22, radius: 6.1, tx: 6.2, ty: 0.62, tz: 1.15 },
+        { t: 0, yaw: 1.02, pitch: 0.24, radius: 6.6, tx: 6.75, ty: 0.62, tz: 0.2 },
+        { t: 0, yaw: 2.35, pitch: 0.28, radius: 7.0, tx: -9.05, ty: 0.58, tz: 0.4 },
+        { t: 0, yaw: 2.84, pitch: 0.24, radius: 7.4, tx: -8.45, ty: 0.6, tz: 1.2 },
+        { t: 0, yaw: -1.26, pitch: 0.36, radius: 8.2, tx: -1.35, ty: 0.55, tz: -6.7 },
+        { t: 0, yaw: -0.18, pitch: 0.52, radius: 19.2, tx: -1.4, ty: 0.75, tz: -1.5 },
+        { t: 0, yaw: 0.62, pitch: 0.3, radius: 10.0, tx: -9.2, ty: 0.55, tz: 0.55 },
+        { t: 0, yaw: -0.48, pitch: 0.26, radius: 9.5, tx: 6.3, ty: 0.58, tz: 1.05 },
+    ];
+    const flyPasses = [
+        { t: 0.0, yaw: -0.9, pitch: 0.33, radius: 21.0, tx: -1.5, ty: 0.7, tz: -1.8 },
+        { t: 0.12, yaw: 0.22, pitch: 0.22, radius: 6.4, tx: 6.45, ty: 0.66, tz: 1.15 },
+        { t: 0.24, yaw: 0.48, pitch: 0.2, radius: 5.6, tx: 6.95, ty: 0.63, tz: 0.25 },
+        { t: 0.36, yaw: 1.86, pitch: 0.24, radius: 6.2, tx: -9.05, ty: 0.64, tz: 0.5 },
+        { t: 0.48, yaw: 2.52, pitch: 0.22, radius: 5.9, tx: -8.35, ty: 0.62, tz: 1.25 },
+        { t: 0.62, yaw: -1.18, pitch: 0.3, radius: 7.4, tx: -1.4, ty: 0.58, tz: -6.8 },
+        { t: 0.74, yaw: -2.1, pitch: 0.27, radius: 8.1, tx: 0.2, ty: 0.62, tz: -12.2 },
+        { t: 0.88, yaw: -0.42, pitch: 0.46, radius: 18.4, tx: -1.5, ty: 0.72, tz: -1.6 },
+        { t: 1.0, yaw: -0.9, pitch: 0.33, radius: 21.0, tx: -1.5, ty: 0.7, tz: -1.8 },
     ];
     let cutIndex = 0;
     function updateCamera() {
@@ -1399,7 +1759,7 @@ export function Acid303Visual(state, analyser) {
     }
     function onWheel(ev) {
         ev.preventDefault();
-        cam.radius = Math.max(6.2, Math.min(18.0, cam.radius + ev.deltaY * 0.01));
+        cam.radius = Math.max(4.8, Math.min(34.0, cam.radius + ev.deltaY * 0.012));
     }
     renderer.domElement.addEventListener("pointerdown", onPointerDown);
     renderer.domElement.addEventListener("pointermove", onPointerMove);
@@ -1421,10 +1781,19 @@ export function Acid303Visual(state, analyser) {
                 cam.yaw += cam.autoOrbitSpeed;
         }
         else if (cameraMode === "fly") {
-            const phase = t * ((state.clock.bpm.value / 60) * 0.35);
-            cam.yaw = Math.sin(phase * 0.9) * 0.45 + phase * 0.08;
-            cam.pitch = 0.26 + Math.sin(phase * 1.4) * 0.09;
-            cam.radius = 8.2 + Math.sin(phase * 1.7) * 0.9;
+            const phase = (t * (state.clock.bpm.value / 60) * flyPathRate) % 1;
+            let seg = 0;
+            while (seg + 1 < flyPasses.length && flyPasses[seg + 1].t < phase)
+                seg++;
+            const a = flyPasses[seg];
+            const b = flyPasses[Math.min(seg + 1, flyPasses.length - 1)];
+            const span = Math.max(0.0001, b.t - a.t);
+            const s = Math.min(1, Math.max(0, (phase - a.t) / span));
+            const lerp = (x, y) => x + (y - x) * s;
+            cam.yaw += (lerp(a.yaw, b.yaw) - cam.yaw) * flyCamSmoothing;
+            cam.pitch += (lerp(a.pitch, b.pitch) - cam.pitch) * flyCamSmoothing;
+            cam.radius += (lerp(a.radius, b.radius) - cam.radius) * flyCamSmoothing;
+            restTarget.set(lerp(a.tx, b.tx), lerp(a.ty, b.ty), lerp(a.tz, b.tz));
         }
         else if (cameraMode === "cuts" && stepEdge && stepNow === 0) {
             cutIndex = (cutIndex + 1) % cutPasses.length;
@@ -1549,9 +1918,9 @@ export function Acid303Visual(state, analyser) {
                 hottestDelta = weightedDelta;
                 k.mesh.getWorldPosition(tmpKnobWorld);
             }
-            const deltaThreshold = k.source === "bassline" ? 0.0019 : 0.004;
-            const decay = k.source === "bassline" ? 0.9 : 0.88;
-            const flashGain = k.source === "bassline" ? 1.2 : 0.9;
+            const deltaThreshold = k.source === "bassline" ? 0.0016 : 0.0032;
+            const decay = k.source === "bassline" ? 0.91 : 0.9;
+            const flashGain = k.source === "bassline" ? 1.24 : 1.08;
             if (delta > deltaThreshold)
                 k.flashLevel = flashGain;
             else
@@ -1571,18 +1940,18 @@ export function Acid303Visual(state, analyser) {
                 const h = 0.05 + 0.04 * Math.sin(t * 2.0 + value01 * 5.0);
                 flashMat.color.setHSL(h, 0.95, 0.63);
                 flashMat.emissive.setHSL(h, 0.9, 0.2);
-                flashMat.emissiveIntensity = 0.12 + k.flashLevel * 1.8;
-                flashMat.opacity = 0.4 + k.flashLevel * 0.34;
-                k.mesh.position.y = k.baseY + k.flashLevel * 0.075;
-                k.mesh.rotation.x = Math.sin(t * 7.5 + value01 * 9.0) * k.flashLevel * 0.045;
-                k.mesh.rotation.z = Math.cos(t * 6.8 + value01 * 8.0) * k.flashLevel * 0.03;
+                flashMat.emissiveIntensity = 0.14 + k.flashLevel * 2.15;
+                flashMat.opacity = 0.44 + k.flashLevel * 0.38;
+                k.mesh.position.y = k.baseY + k.flashLevel * 0.11;
+                k.mesh.rotation.x = Math.sin(t * 8.4 + value01 * 10.0) * k.flashLevel * 0.065;
+                k.mesh.rotation.z = Math.cos(t * 7.6 + value01 * 9.0) * k.flashLevel * 0.05;
             }
         }
         if (hottestDelta > 0.0015) {
-            hotKnobTarget.lerp(tmpKnobWorld, 0.48);
+            hotKnobTarget.lerp(tmpKnobWorld, 0.08 + flyFocusPull * 0.14);
         }
         else {
-            hotKnobTarget.lerp(restTarget, 0.02);
+            hotKnobTarget.lerp(restTarget, 0.012);
         }
         flyPulse = flyPulse * 0.9 + Math.min(1.6, hottestDelta * 54);
         if (stepEdge && stepNow === 0) {
@@ -1592,7 +1961,7 @@ export function Acid303Visual(state, analyser) {
                 if (shaderBarsUntilSwitch <= 0) {
                     shaderMode = shaderModeNext;
                     let pick = shaderModeNext;
-                    const maxModes = 12;
+                    const maxModes = 16;
                     let guard = 0;
                     while ((pick === shaderMode || pick === shaderModeNext) && guard < 12) {
                         pick = Math.floor(Math.random() * maxModes);
@@ -1602,26 +1971,43 @@ export function Acid303Visual(state, analyser) {
                     shaderBlend = 0;
                     shaderBarsUntilSwitch = 1 + Math.floor(Math.random() * 3);
                 }
+                floorShaderBarsUntilSwitch--;
+                if (floorShaderBarsUntilSwitch <= 0) {
+                    floorShaderMode = floorShaderModeNext;
+                    let floorPick = floorShaderModeNext;
+                    const floorMaxModes = 7;
+                    let floorGuard = 0;
+                    while ((floorPick === floorShaderMode || floorPick === floorShaderModeNext) && floorGuard < 12) {
+                        floorPick = Math.floor(Math.random() * floorMaxModes);
+                        floorGuard++;
+                    }
+                    floorShaderModeNext = floorPick;
+                    floorShaderBlend = 0;
+                    floorShaderBarsUntilSwitch = 2 + Math.floor(Math.random() * 4);
+                }
             }
             glitchPulse = Math.min(1, glitchPulse + 0.45);
         }
         if (cameraMode === "fly") {
-            const phase = t * ((state.clock.bpm.value / 60) * 0.35);
-            target.lerp(hotKnobTarget, 0.2);
-            target.y += 0.08 + Math.sin(phase * 3.8) * 0.04;
-            cam.radius = Math.max(3.4, Math.min(7.2, 5.1 - flyPulse + Math.sin(phase * 2.4) * 0.45));
-            cam.yaw += 0.02 + hottestDelta * 2.2;
-            cam.pitch = Math.max(0.14, Math.min(0.85, 0.22 + flyPulse * 0.2));
+            const phase = t * ((state.clock.bpm.value / 60) * (0.16 + flyPathRate * 0.9));
+            target.lerp(restTarget, 0.06 + flyCamSmoothing * 0.12);
+            target.lerp(hotKnobTarget, 0.025 + flyFocusPull * 0.09 + Math.min(0.035, hottestDelta * 1.2));
+            target.y += 0.003 + Math.sin(phase * 2.0) * 0.003;
+            const desiredPitch = 0.22 + flyPulse * 0.03;
+            cam.pitch = Math.max(0.14, Math.min(0.88, cam.pitch + (desiredPitch - cam.pitch) * (0.02 + flyCamSmoothing * 0.08)));
         }
-        const acidCrazy = 0.35 + acidEnergy * 0.65 + Math.min(0.5, hottestDelta * 2.0);
-        // Exaggerated cartoon motion pass.
+        const acidCrazy = 0.42 + acidEnergy * 0.82 + Math.min(0.62, hottestDelta * 2.5);
         const groove = 0.5 + 0.5 * Math.sin(t * 3.2 + state.clock.bpm.value * 0.01);
+        const drumHitPulse = Math.max(drumLanePunch[0], drumLanePunch[1], drumLanePunch[2], drumLanePunch[3]) * 0.85 +
+            drumEnergy * 0.55;
+        // Exaggerated cartoon motion pass.
         rig303.position.y = rig303BaseY + (0.05 + acidCrazy * 0.14) * Math.sin(t * 2.9);
         rig909.position.y = rig909BaseY + (0.035 + drumEnergy * 0.1) * Math.sin(t * 2.5 + 1.2);
-        rigMixer.position.y = rigMixerBaseY + 0.02 * Math.sin(t * 1.8 + 0.6);
-        speakersGroup.position.y = speakersBaseY + 0.05 * Math.sin(t * 2.4 + 0.9);
-        rig303.rotation.z = Math.sin(t * 2.2) * (0.03 + acidCrazy * 0.03);
-        rig909.rotation.z = Math.sin(t * 2.1 + 0.8) * 0.02;
+        rigMixer.position.y = rigMixerBaseY + (0.02 + acidCrazy * 0.025) * Math.sin(t * 2.0 + 0.6);
+        speakersGroup.position.y = speakersBaseY + (0.05 + acidCrazy * 0.04) * Math.sin(t * 2.6 + 0.9);
+        rig303.rotation.z = Math.sin(t * 2.2) * (0.03 + acidCrazy * 0.04);
+        rig909.rotation.z = Math.sin(t * 2.1 + 0.8) * (0.02 + acidCrazy * 0.03);
+        rigMixer.rotation.z = Math.sin(t * 1.7 + 0.4) * (0.012 + acidCrazy * 0.018);
         const squish303 = 1 + Math.sin(t * 2.5) * (0.035 + acidEnergy * 0.05);
         rig303.scale.set(1.12 / squish303, 1.2 * squish303, 1.12 / squish303);
         const squish909 = 1 + Math.sin(t * 2.1 + 0.8) * (0.03 + drumEnergy * 0.045);
@@ -1635,18 +2021,63 @@ export function Acid303Visual(state, analyser) {
         for (const tw of speakerTweeters) {
             tw.scale.setScalar(1 + acidEnergy * 0.04);
         }
-        funDeco.rotation.y += 0.002 + acidEnergy * 0.003;
-        funDeco.rotation.x = Math.sin(t * 0.34) * 0.08;
+        const fxBoundsX = 8.5 + acidFxSpread * 5.5;
+        const fxBoundsZ = 7.5 + acidFxSpread * 4.8;
+        for (let i = 0; i < decoMovers.length; i++) {
+            const d = decoMovers[i];
+            const moveStep = 0.01 * acidFxRoamSpeed * (0.85 + drumEnergy * 0.35);
+            d.mesh.position.x += d.vel.x * moveStep;
+            d.mesh.position.z += d.vel.z * moveStep;
+            if (Math.abs(d.mesh.position.x) > fxBoundsX) {
+                d.vel.x *= -1;
+                d.mesh.position.x = Math.max(-fxBoundsX, Math.min(fxBoundsX, d.mesh.position.x));
+            }
+            if (Math.abs(d.mesh.position.z) > fxBoundsZ) {
+                d.vel.z *= -1;
+                d.mesh.position.z = Math.max(-fxBoundsZ, Math.min(fxBoundsZ, d.mesh.position.z));
+            }
+            if (stepEdge && stepNow % 4 === 0) {
+                d.vel.x += (Math.random() * 2 - 1) * 0.32 * acidFxHit;
+                d.vel.z += (Math.random() * 2 - 1) * 0.32 * acidFxHit;
+                const sp = Math.hypot(d.vel.x, d.vel.z);
+                const maxSp = 1.5 + acidFxRoamSpeed * 1.2;
+                if (sp > maxSp && sp > 0.0001) {
+                    d.vel.multiplyScalar(maxSp / sp);
+                }
+            }
+            d.mesh.position.y =
+                d.baseY + Math.sin(t * (1.7 + d.phase) + d.phase) * (0.12 + acidFxHit * 0.16) + drumHitPulse * 0.2 * acidFxHit;
+            d.mesh.scale.setScalar(acidFxSize * (0.8 + drumHitPulse * 0.24));
+            d.mesh.rotation.x += d.spin.x * (0.7 + acidFxRoamSpeed * 0.5);
+            d.mesh.rotation.y += d.spin.y * (0.7 + acidFxRoamSpeed * 0.5);
+            d.mesh.rotation.z += d.spin.z * (0.7 + acidFxRoamSpeed * 0.5);
+        }
+        acidHaloGroup.scale.setScalar(acidFxSize * (0.9 + drumHitPulse * 0.2));
         if (perfTick % 2 === 0) {
             for (let i = 0; i < acidHalos.length; i++) {
                 const h = acidHalos[i];
+                const m = acidHaloMeta[i];
+                const ang = t * (0.2 + m.speed * 0.22) + m.phase;
+                const driftR = m.baseR * acidFxSpread;
+                h.position.x = Math.cos(ang) * driftR;
+                h.position.z = Math.sin(ang) * driftR;
+                h.position.y = m.baseY + Math.sin(t * 0.9 + m.phase) * 0.2 * m.wobble + drumHitPulse * 0.12;
                 h.rotation.z += 0.004 + i * 0.0008 + acidEnergy * 0.003;
                 h.rotation.y += 0.003 + drumEnergy * 0.002;
-                const pulse = 1 + Math.sin(t * (1.0 + i * 0.2) + i) * (0.06 + acidEnergy * 0.08);
+                const pulse = 1 + Math.sin(t * (1.0 + i * 0.2) + i) * (0.06 + acidEnergy * 0.08) + drumHitPulse * 0.12 * acidFxHit;
                 h.scale.setScalar(pulse);
                 const hm = h.material;
                 hm.emissiveIntensity = 0.55 + acidEnergy * 0.8 + drumEnergy * 0.4;
                 hm.opacity = 0.5 + acidEnergy * 0.2;
+            }
+        }
+        cablePulse = Math.sin(t * 4.2 + acidEnergy * 6.0) * (0.12 + acidCrazy * 0.2);
+        if (perfTick % 2 === 0) {
+            const cableHue = 0.08 + Math.sin(t * 1.5 + acidEnergy * 4.0) * 0.08;
+            for (const c of patchCables) {
+                const lm = c.line.material;
+                lm.color.setHSL(cableHue, 0.95, 0.64);
+                lm.opacity = 0.45 + acidCrazy * 0.35;
             }
         }
         if (trippyHardwareEnabled) {
@@ -1661,7 +2092,9 @@ export function Acid303Visual(state, analyser) {
                 for (let i = 0; i < trippyOrbs.length; i++) {
                     const o = trippyOrbs[i];
                     const wobble = t * o.speed + o.phase;
-                    o.mesh.position.set(o.base.x + Math.cos(wobble * 0.8) * o.amp, o.base.y + Math.sin(wobble) * o.amp * 1.2, o.base.z + Math.sin(wobble * 0.6) * o.amp);
+                    const roam = acidFxSpread * 0.2;
+                    o.mesh.position.set(o.base.x + Math.cos(wobble * 0.8) * o.amp * acidFxSpread + Math.sin(wobble * 0.17 + i) * roam, o.base.y + Math.sin(wobble) * o.amp * (1.2 + acidFxHit * 0.6), o.base.z + Math.sin(wobble * 0.6) * o.amp * acidFxSpread + Math.cos(wobble * 0.19 + i) * roam);
+                    o.mesh.scale.setScalar(acidFxSize * (0.72 + drumHitPulse * 0.22 * acidFxHit));
                     o.mesh.rotation.x += 0.01 + acidEnergy * 0.012;
                     o.mesh.rotation.y += 0.015 + drumEnergy * 0.012;
                     const m = o.mesh.material;
@@ -1677,15 +2110,26 @@ export function Acid303Visual(state, analyser) {
             }
             for (const o of trippyOrbs) {
                 o.mesh.position.copy(o.base);
+                o.mesh.scale.setScalar(acidFxSize * 0.72);
                 o.mesh.material.emissiveIntensity = 0.35;
             }
         }
         shaderBlend = Math.min(1, shaderBlend + 0.012 + drumEnergy * 0.02 + acidEnergy * 0.012);
+        floorShaderBlend = Math.min(1, floorShaderBlend + 0.01 + acidEnergy * 0.016 + drumEnergy * 0.01);
         glitchPulse = glitchPulse * 0.9 + (drumEnergy + acidEnergy) * 0.035;
         vjUniforms.uMode.value = shaderMode;
         vjUniforms.uModeB.value = shaderModeNext;
         vjUniforms.uBlend.value = shaderBlend;
         vjUniforms.uGlitch.value = Math.min(1, glitchPulse);
+        vjUniforms.uChaos.value = Math.min(1.25, acidCrazy + hottestDelta * 1.2);
+        floorUniforms.uTime.value = t;
+        floorUniforms.uBpm.value = state.clock.bpm.value;
+        floorUniforms.uAcid.value = acidEnergy;
+        floorUniforms.uDrums.value = drumEnergy;
+        floorUniforms.uMode.value = floorShaderMode;
+        floorUniforms.uModeB.value = floorShaderModeNext;
+        floorUniforms.uBlend.value = floorShaderBlend;
+        floorUniforms.uChaos.value = Math.min(1.35, acidCrazy + drumEnergy * 0.75 + hottestDelta * 1.5);
         if (vjMotionEnabled) {
             vjGroup.rotation.y = t * 0.05 + flyPulse * 0.08;
             const sidePulse = 0.85 + 0.35 * Math.sin(t * 0.9 + vjUniforms.uAcid.value * 5.0);

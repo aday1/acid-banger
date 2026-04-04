@@ -611,12 +611,28 @@ function AudioMeter(analyser) {
     wrap.classList.add("acid-meter-wrap");
     const controls = document.createElement("div");
     controls.classList.add("acid-meter-controls");
-    const canvas = document.createElement("canvas");
-    canvas.style.width = "100%";
-    canvas.classList.add("acid-meter-canvas");
-    let w = (canvas.width = 340);
-    const h = (canvas.height = 128);
-    const g = canvas.getContext("2d");
+    const mainWrap = document.createElement("div");
+    mainWrap.classList.add("acid-meter-main-wrap");
+    const barsCanvas = document.createElement("canvas");
+    barsCanvas.style.width = "100%";
+    barsCanvas.classList.add("acid-meter-main-canvas");
+    const waveCanvas = document.createElement("canvas");
+    waveCanvas.style.width = "100%";
+    waveCanvas.classList.add("acid-meter-main-canvas");
+    const peaksCanvas = document.createElement("canvas");
+    peaksCanvas.style.width = "100%";
+    peaksCanvas.classList.add("acid-meter-main-canvas");
+    mainWrap.append(barsCanvas, waveCanvas, peaksCanvas);
+    let wBars = (barsCanvas.width = 340);
+    let wWave = (waveCanvas.width = 340);
+    let wPeaks = (peaksCanvas.width = 340);
+    const hMain = 84;
+    barsCanvas.height = hMain;
+    waveCanvas.height = hMain;
+    peaksCanvas.height = hMain;
+    const gBars = barsCanvas.getContext("2d");
+    const gWave = waveCanvas.getContext("2d");
+    const gPeaks = peaksCanvas.getContext("2d");
     const splitWrap = document.createElement("div");
     splitWrap.classList.add("acid-meter-split-wrap");
     const bandCanvases = {
@@ -642,6 +658,7 @@ function AudioMeter(analyser) {
     const fft = new Uint8Array(analyser.frequencyBinCount);
     const splitFft = new Uint8Array(analyser.frequencyBinCount);
     const bars = 64;
+    const barLevels = new Array(bars).fill(0);
     const peakHold = new Array(bars).fill(0);
     const grain = new Array(24).fill(0).map((_, i) => Math.sin(i * 17.123));
     let showBars = true;
@@ -656,7 +673,7 @@ function AudioMeter(analyser) {
     let meterTick = 0;
     let meterAlign = "center";
     function setMeterAlign() {
-        const all = [canvas, splitWrap];
+        const all = [mainWrap, splitWrap];
         if (meterAlign === "left") {
             for (const el of all) {
                 el.style.marginLeft = "0";
@@ -709,7 +726,16 @@ function AudioMeter(analyser) {
         meterAlign = alignSelect.value;
         setMeterAlign();
     });
-    controls.append(meterToggle("Bars", true, (on) => (showBars = on)), meterToggle("Wave", true, (on) => (showWave = on)), meterToggle("Peaks", true, (on) => (showPeaks = on)), meterToggle("Grid", true, (on) => (showGrid = on)), meterToggle("Scan", true, (on) => (showScan = on)), meterToggle("Split bands", true, (on) => {
+    controls.append(meterToggle("Bars", true, (on) => {
+        showBars = on;
+        barsCanvas.style.display = on ? "block" : "none";
+    }), meterToggle("Wave", true, (on) => {
+        showWave = on;
+        waveCanvas.style.display = on ? "block" : "none";
+    }), meterToggle("Peaks", true, (on) => {
+        showPeaks = on;
+        peaksCanvas.style.display = on ? "block" : "none";
+    }), meterToggle("Grid", true, (on) => (showGrid = on)), meterToggle("Scan", true, (on) => (showScan = on)), meterToggle("Split bands", true, (on) => {
         showSplitBands = on;
         splitWrap.style.display = on ? "grid" : "none";
     }), meterToggle("LOW layer", true, (on) => {
@@ -722,7 +748,7 @@ function AudioMeter(analyser) {
         showHighLayer = on;
         bandCanvases.high.style.display = on ? "block" : "none";
     }), alignSelect);
-    wrap.append(controls, canvas, splitWrap);
+    wrap.append(controls, mainWrap, splitWrap);
     function draw() {
         meterTick++;
         analyser.getByteTimeDomainData(waveform);
@@ -730,8 +756,14 @@ function AudioMeter(analyser) {
         const drawSplitThisFrame = meterTick % 2 === 0;
         if (drawSplitThisFrame)
             analyser.getByteFrequencyData(splitFft);
-        if (canvas.clientWidth > 0 && canvas.clientWidth !== w) {
-            w = canvas.width = Math.max(180, Math.floor(canvas.clientWidth));
+        if (barsCanvas.clientWidth > 0 && barsCanvas.clientWidth !== wBars) {
+            wBars = barsCanvas.width = Math.max(180, Math.floor(barsCanvas.clientWidth));
+        }
+        if (waveCanvas.clientWidth > 0 && waveCanvas.clientWidth !== wWave) {
+            wWave = waveCanvas.width = Math.max(180, Math.floor(waveCanvas.clientWidth));
+        }
+        if (peaksCanvas.clientWidth > 0 && peaksCanvas.clientWidth !== wPeaks) {
+            wPeaks = peaksCanvas.width = Math.max(180, Math.floor(peaksCanvas.clientWidth));
         }
         if (splitWrap.clientWidth > 0 && splitWrap.clientWidth !== bw) {
             bw = Math.max(180, Math.floor(splitWrap.clientWidth));
@@ -740,37 +772,37 @@ function AudioMeter(analyser) {
             bandCanvases.high.width = bw;
         }
         const t = performance.now() * 0.001;
-        const bgGrad = g.createLinearGradient(0, 0, 0, h);
-        bgGrad.addColorStop(0, "#1a120f");
-        bgGrad.addColorStop(0.45, "#0b0c12");
-        bgGrad.addColorStop(1, "#08090d");
-        g.fillStyle = bgGrad;
-        g.fillRect(0, 0, w, h);
-        if (showScan) {
-            for (let y = 0; y < h; y += 2) {
-                const noise = (Math.sin(y * 3.11 + t * 6.0) * 0.5 + 0.5) * 0.08;
-                g.fillStyle = `rgba(255,140,90,${0.03 + noise})`;
-                g.fillRect(0, y, w, 1);
+        function drawBackdrop(gg, ww, hh) {
+            const bgGrad = gg.createLinearGradient(0, 0, 0, hh);
+            bgGrad.addColorStop(0, "#1a120f");
+            bgGrad.addColorStop(0.45, "#0b0c12");
+            bgGrad.addColorStop(1, "#08090d");
+            gg.fillStyle = bgGrad;
+            gg.fillRect(0, 0, ww, hh);
+            if (showScan) {
+                for (let y = 0; y < hh; y += 2) {
+                    const noise = (Math.sin(y * 3.11 + t * 6.0) * 0.5 + 0.5) * 0.08;
+                    gg.fillStyle = `rgba(255,140,90,${0.03 + noise})`;
+                    gg.fillRect(0, y, ww, 1);
+                }
             }
-        }
-        if (showGrid) {
-            g.strokeStyle = "rgba(140,150,200,0.14)";
-            for (let x = 0; x <= w; x += 24) {
-                g.beginPath();
-                g.moveTo(x + 0.5, 0);
-                g.lineTo(x + 0.5, h);
-                g.stroke();
-            }
-            for (let y = 0; y <= h; y += 16) {
-                g.beginPath();
-                g.moveTo(0, y + 0.5);
-                g.lineTo(w, y + 0.5);
-                g.stroke();
+            if (showGrid) {
+                gg.strokeStyle = "rgba(140,150,200,0.14)";
+                for (let x = 0; x <= ww; x += 24) {
+                    gg.beginPath();
+                    gg.moveTo(x + 0.5, 0);
+                    gg.lineTo(x + 0.5, hh);
+                    gg.stroke();
+                }
+                for (let y = 0; y <= hh; y += 16) {
+                    gg.beginPath();
+                    gg.moveTo(0, y + 0.5);
+                    gg.lineTo(ww, y + 0.5);
+                    gg.stroke();
+                }
             }
         }
         if (showBars || showPeaks) {
-            g.globalCompositeOperation = "lighter";
-            const barW = w / bars;
             for (let i = 0; i < bars; i++) {
                 const from = Math.floor((i / bars) * fft.length);
                 const to = Math.max(from + 1, Math.floor(((i + 1) / bars) * fft.length));
@@ -780,41 +812,67 @@ function AudioMeter(analyser) {
                 const avg = sum / (to - from);
                 const value = Math.min(1, Math.max(0, avg / 255));
                 const boosted = Math.pow(value, 0.72);
+                barLevels[i] = boosted;
                 peakHold[i] = Math.max(boosted, peakHold[i] * 0.94);
-                const x = i * barW;
-                const barH = boosted * (h * 0.82);
-                const peakY = h - peakHold[i] * (h * 0.82);
-                const hue = 20 + i * 1.4;
-                if (showBars) {
-                    g.fillStyle = `hsla(${hue},85%,${28 + boosted * 36}%,0.85)`;
-                    g.fillRect(x + 0.8, h - barH, Math.max(1, barW - 1.6), barH);
-                }
-                if (showPeaks) {
-                    g.fillStyle = `hsla(${hue + 30},95%,70%,0.92)`;
-                    g.fillRect(x + 0.6, peakY - 1, Math.max(1, barW - 1.2), 2);
-                }
             }
-            g.globalCompositeOperation = "source-over";
+        }
+        if (showBars) {
+            drawBackdrop(gBars, wBars, hMain);
+            gBars.globalCompositeOperation = "lighter";
+            const barW = wBars / bars;
+            for (let i = 0; i < bars; i++) {
+                const boosted = barLevels[i];
+                const x = i * barW;
+                const barH = boosted * (hMain * 0.82);
+                const hue = 20 + i * 1.4;
+                gBars.fillStyle = `hsla(${hue},85%,${28 + boosted * 36}%,0.85)`;
+                gBars.fillRect(x + 0.8, hMain - barH, Math.max(1, barW - 1.6), barH);
+            }
+            gBars.globalCompositeOperation = "source-over";
+            gBars.strokeStyle = "rgba(255,180,120,0.25)";
+            gBars.beginPath();
+            gBars.moveTo(0, hMain * 0.66);
+            gBars.lineTo(wBars, hMain * 0.66);
+            gBars.stroke();
+        }
+        if (showPeaks) {
+            drawBackdrop(gPeaks, wPeaks, hMain);
+            gPeaks.globalCompositeOperation = "lighter";
+            const barW = wPeaks / bars;
+            for (let i = 0; i < bars; i++) {
+                const x = i * barW;
+                const peakY = hMain - peakHold[i] * (hMain * 0.82);
+                const hue = 20 + i * 1.4;
+                gPeaks.fillStyle = `hsla(${hue + 30},95%,70%,0.92)`;
+                gPeaks.fillRect(x + 0.6, peakY - 1, Math.max(1, barW - 1.2), 2);
+            }
+            gPeaks.globalCompositeOperation = "source-over";
+            gPeaks.strokeStyle = "rgba(255,200,130,0.28)";
+            gPeaks.beginPath();
+            gPeaks.moveTo(0, hMain * 0.66);
+            gPeaks.lineTo(wPeaks, hMain * 0.66);
+            gPeaks.stroke();
         }
         if (showWave) {
-            g.strokeStyle = "rgba(185,225,255,0.95)";
-            g.shadowColor = "rgba(110,200,255,0.55)";
-            g.shadowBlur = 8;
-            g.beginPath();
-            g.moveTo(0, h / 2);
+            drawBackdrop(gWave, wWave, hMain);
+            gWave.strokeStyle = "rgba(185,225,255,0.95)";
+            gWave.shadowColor = "rgba(110,200,255,0.55)";
+            gWave.shadowBlur = 8;
+            gWave.beginPath();
+            gWave.moveTo(0, hMain / 2);
             for (let i = 0; i < waveform.length; i++) {
                 const v = waveform[i] / 128 - 1;
                 const grit = grain[i % grain.length] * 0.01;
-                g.lineTo((w * i) / waveform.length, h / 2 + 1.35 * (v + grit) * (h / 2));
+                gWave.lineTo((wWave * i) / waveform.length, hMain / 2 + 1.35 * (v + grit) * (hMain / 2));
             }
-            g.stroke();
-            g.shadowBlur = 0;
+            gWave.stroke();
+            gWave.shadowBlur = 0;
+            gWave.strokeStyle = "rgba(140,220,255,0.26)";
+            gWave.beginPath();
+            gWave.moveTo(0, hMain * 0.5);
+            gWave.lineTo(wWave, hMain * 0.5);
+            gWave.stroke();
         }
-        g.strokeStyle = "rgba(255,180,120,0.25)";
-        g.beginPath();
-        g.moveTo(0, h * 0.66);
-        g.lineTo(w, h * 0.66);
-        g.stroke();
         if (showSplitBands && drawSplitThisFrame) {
             const bands = [
                 {

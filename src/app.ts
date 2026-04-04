@@ -631,5 +631,5 @@ async function start() {
 pressToStart(
     start,
     "The Endless Acid Banger",
-    "A collaboration between human and algorithm by Vitling"
+    "remixed by aday <a href=\"https://github.com/aday1/acid-banger\">https://github.com/aday1/acid-banger</a><br>forked from <a href=\"https://github.com/vitling/acid-banger\">https://github.com/vitling/acid-banger</a>"
 );
