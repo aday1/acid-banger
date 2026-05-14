@@ -461,7 +461,12 @@ export function Acid303Visual(state: ProgramState, analyser: AnalyserNode): HTML
 
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const coarsePointer =
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(pointer: coarse)").matches;
+    const maxPixelRatio = coarsePointer ? 1 : 2;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxPixelRatio));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     mount.append(renderer.domElement);
 

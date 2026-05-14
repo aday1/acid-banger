@@ -827,6 +827,7 @@ function AutopilotControls(
 }
 
 function AudioMeter(analyser: AnalyserNode) {
+    const liteMode = shouldUseLiteVisualMode();
     const wrap = document.createElement("div");
     wrap.classList.add("acid-meter-wrap");
     const controls = document.createElement("div");
@@ -883,14 +884,14 @@ function AudioMeter(analyser: AnalyserNode) {
     const peakHold = new Array<number>(bars).fill(0);
     const grain = new Array<number>(24).fill(0).map((_, i) => Math.sin(i * 17.123));
     let showBars = true;
-    let showWave = true;
-    let showPeaks = true;
+    let showWave = !liteMode;
+    let showPeaks = !liteMode;
     let showGrid = true;
-    let showScan = true;
-    let showSplitBands = true;
-    let showLowLayer = true;
-    let showMidLayer = true;
-    let showHighLayer = true;
+    let showScan = !liteMode;
+    let showSplitBands = !liteMode;
+    let showLowLayer = !liteMode;
+    let showMidLayer = !liteMode;
+    let showHighLayer = !liteMode;
     let meterTick = 0;
     let meterAlign: "left" | "center" | "right" = "center";
 
@@ -982,13 +983,22 @@ function AudioMeter(analyser: AnalyserNode) {
         }),
         alignSelect
     );
+    if (liteMode) {
+        waveCanvas.style.display = "none";
+        peaksCanvas.style.display = "none";
+        splitWrap.style.display = "none";
+    }
     wrap.append(controls, mainWrap, splitWrap);
 
     function draw() {
         meterTick++;
+        if (liteMode && meterTick % 3 !== 0) {
+            window.requestAnimationFrame(draw);
+            return;
+        }
         analyser.getByteTimeDomainData(waveform);
         analyser.getByteFrequencyData(fft);
-        const drawSplitThisFrame = meterTick % 2 === 0;
+        const drawSplitThisFrame = !liteMode && meterTick % 2 === 0;
         if (drawSplitThisFrame) analyser.getByteFrequencyData(splitFft);
 
         if (barsCanvas.clientWidth > 0 && barsCanvas.clientWidth !== wBars) {
@@ -2063,6 +2073,51 @@ function OscPanel(state: ProgramState) {
     return box;
 }
 
+function shouldUseLiteVisualMode(): boolean {
+    const coarsePointer =
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(pointer: coarse)").matches;
+    const narrowScreen =
+        typeof window !== "undefined" && window.innerWidth < 860;
+    const lowCoreCount =
+        typeof navigator !== "undefined" &&
+        typeof navigator.hardwareConcurrency === "number" &&
+        navigator.hardwareConcurrency <= 4;
+    const navWithMemory = navigator as Navigator & { deviceMemory?: number };
+    const lowMemory =
+        typeof navigator !== "undefined" &&
+        typeof navWithMemory.deviceMemory === "number" &&
+        navWithMemory.deviceMemory <= 4;
+    return coarsePointer || narrowScreen || lowCoreCount || lowMemory;
+}
+
+function visualPanel(state: ProgramState, analyser: AnalyserNode): HTMLElement {
+    const host = document.createElement("div");
+    host.classList.add("visual-host");
+    const liteMode = shouldUseLiteVisualMode();
+    if (!liteMode) {
+        host.append(Acid303Visual(state, analyser));
+        return host;
+    }
+
+    host.classList.add("visual-lite");
+    const note = document.createElement("p");
+    note.classList.add("visual-lite-note");
+    note.textContent =
+        "Mobile-safe visual mode: 3D hardware render is paused by default to keep knobs, buttons and scrolling responsive.";
+    const enableBtn = document.createElement("button");
+    enableBtn.type = "button";
+    enableBtn.classList.add("visual-lite-enable");
+    enableBtn.textContent = "Enable full 3D visual";
+    enableBtn.addEventListener("click", () => {
+        host.classList.remove("visual-lite");
+        host.replaceChildren(Acid303Visual(state, analyser));
+    });
+    host.append(note, enableBtn);
+    return host;
+}
+
 export function UI(
     state: ProgramState,
     autoPilot: AutoPilotUnit,
@@ -2101,7 +2156,7 @@ export function UI(
                 midiMenu: midiTargetMenu,
             })
         ),
-        controlGroup(label("Visual"), group(Acid303Visual(state, analyser))),
+        controlGroup(label("Visual"), group(visualPanel(state, analyser))),
         controlGroup(label("Meter"), group(AudioMeter(analyser)), "meter")
     );
 
